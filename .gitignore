@@ -1,0 +1,50 @@
+# Temporary files and logs
+tmp/
+*.log
+*.trace
+*.bak
+*.swp
+
+# Binaries
+main
+*.exe
+*.dll
+*.so
+
+# Dependency Directories
+vendor/
+node_modules/
+
+# Build Artifacts
+bin/
+out/
+dist/
+
+# IDE/Editor Files
+.vscode/
+.idea/
+*.iml
+
+# OS Generated Files
+*.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+.env
+/localDevFiles
+
+# Go test cache
+*.test
+
+# Exclude build-related errors
+tmp/build-errors.log
+
+# Exclude specific files
+tmp/main
+
+# Exclude Go linting cache
+.cache/
+.coverage/

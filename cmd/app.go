@@ -7,65 +7,67 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/aakritigkmit/payment-gateway/internal/handlers"
-	"github.com/aakritigkmit/payment-gateway/internal/repository"
-	"github.com/aakritigkmit/payment-gateway/internal/routes"
-	"github.com/aakritigkmit/payment-gateway/internal/services"
+	"payment-gateway/internal/config"
+	"payment-gateway/internal/routes"
+	"payment-gateway/internal/utils"
+
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// Load environment variables
-func init() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("error while reading .env")
-	}
+type App struct {
+	router *chi.Mux
+	db     *mongo.Database
 }
 
-// MongoDB Connection
-func mongoConnection() *mongo.Client {
-	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	opts := options.Client().ApplyURI(os.Getenv("MONGO_URI")).SetServerAPIOptions(serverAPI)
+// NewApp initializes a new application instance
+func NewApp() (*App, error) {
+	// Load environment variables
+	config.LoadEnv()
 
-	client, err := mongo.Connect(context.TODO(), opts)
+	// Connect to the database
+	db, err := utils.ConnectDB()
 	if err != nil {
-		log.Fatal("Failed to connect to MongoDB:", err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	if err := client.Database("admin").RunCommand(context.TODO(), bson.D{{Key: "ping", Value: 1}}).Err(); err != nil {
-		log.Fatal("MongoDB ping failed:", err)
-	}
-	fmt.Println("Connected to MongoDB!")
-	return client
+	// Initialize router and setup routes
+	router := chi.NewRouter()
+	routes.SetupRoutes(router, db)
+
+	return &App{
+		router: router,
+		db:     db,
+	}, nil
 }
 
-// Initialize services and routes
-func initializeApp() (*mongo.Client, *chi.Mux) {
-	mongoClient := mongoConnection()
-	collection := mongoClient.Database(os.Getenv("MONGO_DBNAME")).Collection(os.Getenv("MONGO_COLLECTION_NAME"))
+// Start runs the HTTP server with graceful shutdown
+func (a *App) Start(ctx context.Context) error {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 
-	userRepo := repository.NewUserRepo(collection)
-	authRepo := repository.NewAuthRepo(collection)
-	userService := services.NewUserService(userRepo)
-	authService := services.NewAuthService(authRepo, userRepo)
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: a.router,
+	}
 
-	userHandler := handlers.NewUserHandler(userService)
-	authHandler := handlers.NewAuthHandler(authService)
+	// Log server start
+	log.Println("Server running on port", port)
 
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Route("/api", func(subRouter chi.Router) {
-		subRouter.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("Server is healthy"))
-		})
-		subRouter.Mount("/users", routes.UserRoutes(userHandler))
-		subRouter.Mount("/auth", routes.AuthRoutes(authHandler))
-	})
+	// Start the server in a goroutine
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- server.ListenAndServe()
+	}()
 
-	return mongoClient, r
+	// Graceful shutdown handling
+	select {
+	case err := <-errChan:
+		return fmt.Errorf("server error: %w", err)
+	case <-ctx.Done():
+		log.Println("Shutting down server...")
+		return server.Shutdown(context.Background())
+	}
 }
