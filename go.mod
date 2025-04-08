@@ -3,14 +3,12 @@ module payment-gateway
 go 1.24.1
 
 require (
-	github.com/aakritigkmit/my-go-crud v0.0.0-20250326113711-b894908a890d
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/joho/godotenv v1.5.1
 	go.mongodb.org/mongo-driver v1.17.3
 )
 
 require (
-	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect

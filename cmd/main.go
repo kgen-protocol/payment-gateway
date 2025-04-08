@@ -2,23 +2,25 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
-	mongoClient, router := initializeApp()
-	defer func() {
-		if err := mongoClient.Disconnect(context.Background()); err != nil {
-			log.Fatal("Error disconnecting MongoDB:", err)
-		}
-		fmt.Println("Disconnected from MongoDB")
-	}()
+	// Initialize the app
+	app, err := NewApp()
+	if err != nil {
+		log.Fatalf("Error initializing application: %v", err)
+	}
 
-	port := ":4444"
-	fmt.Println("Server started on port", port)
-	if err := http.ListenAndServe(port, router); err != nil {
-		log.Fatal("Failed to start server:", err)
+	// Handle graceful shutdown
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	// Start the application
+	if err := app.Start(ctx); err != nil {
+		log.Fatalf("Application error: %v", err)
 	}
 }
