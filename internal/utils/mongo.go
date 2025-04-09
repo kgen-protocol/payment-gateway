@@ -37,5 +37,5 @@ func ConnectDB() (*mongo.Database, error) {
 	log.Println("Connected to MongoDB")
 	Client = client
 
-	return client.Database("bookstore"), nil
+	return client.Database("payment-gateway"), nil
 }
