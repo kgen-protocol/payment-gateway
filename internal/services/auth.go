@@ -12,17 +12,16 @@ import (
 )
 
 type AuthService struct {
-	AuthRepo *repository.AuthRepo
-	Repo     *repository.UserRepo
+	UserRepo *repository.UserRepo
 }
 
-func NewAuthService(authRepo *repository.AuthRepo, repo *repository.UserRepo) *AuthService {
-	return &AuthService{AuthRepo: authRepo, Repo: repo}
+func NewAuthService(userRepo *repository.UserRepo) *AuthService {
+	return &AuthService{UserRepo: userRepo}
 }
 
 func (s *AuthService) RegisterUser(userReq dto.UserRequest) error {
 
-	existingUser, _ := s.AuthRepo.FindUserByEmail(userReq.EmailID)
+	existingUser, _ := s.UserRepo.FindUserByEmail(userReq.EmailID)
 	if existingUser != nil {
 		return fmt.Errorf("user with email %s already exists", userReq.EmailID)
 	}
@@ -42,7 +41,7 @@ func (s *AuthService) RegisterUser(userReq dto.UserRequest) error {
 		MobileNumber: userReq.MobileNumber,
 	}
 
-	userID, err := s.Repo.CreateUser(user) // Call the repository method
+	userID, err := s.UserRepo.CreateUser(user) // Call the repository method
 	if err != nil {
 		fmt.Println("Error while register user in DB:", err)
 		return err
@@ -54,7 +53,7 @@ func (s *AuthService) RegisterUser(userReq dto.UserRequest) error {
 }
 
 func (s *AuthService) Login(email, password string) (string, error) {
-	user, err := s.AuthRepo.FindUserByEmail(email)
+	user, err := s.UserRepo.FindUserByEmail(email)
 	if err != nil {
 		fmt.Println("Error finding user:", err) // Print error
 		return "", errors.New("invalid credentials")

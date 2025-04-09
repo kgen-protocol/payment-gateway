@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 
-	"payment-gateway/internal/config"
-	"payment-gateway/internal/routes"
-	"payment-gateway/internal/utils"
+	"github.com/aakritigkmit/payment-gateway/internal/config"
+	"github.com/aakritigkmit/payment-gateway/internal/routes"
+	"github.com/aakritigkmit/payment-gateway/internal/utils"
 
 	"github.com/go-chi/chi/v5"
 	"go.mongodb.org/mongo-driver/mongo"
