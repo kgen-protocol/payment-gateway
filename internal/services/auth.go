@@ -21,9 +21,9 @@ func NewAuthService(userRepo *repository.UserRepo) *AuthService {
 
 func (s *AuthService) RegisterUser(userReq dto.UserRequest) error {
 
-	existingUser, _ := s.UserRepo.FindUserByEmail(userReq.EmailID)
+	existingUser, _ := s.UserRepo.FindUserByEmail(userReq.Email)
 	if existingUser != nil {
-		return fmt.Errorf("user with email %s already exists", userReq.EmailID)
+		return fmt.Errorf("user with email %s already exists", userReq.Email)
 	}
 
 	// Hash password
@@ -36,7 +36,7 @@ func (s *AuthService) RegisterUser(userReq dto.UserRequest) error {
 
 		FirstName:    userReq.FirstName,
 		LastName:     userReq.LastName,
-		EmailID:      userReq.EmailID,
+		Email:        userReq.Email,
 		Password:     string(hashedPassword),
 		MobileNumber: userReq.MobileNumber,
 	}
@@ -53,6 +53,7 @@ func (s *AuthService) RegisterUser(userReq dto.UserRequest) error {
 }
 
 func (s *AuthService) Login(email, password string) (string, error) {
+	fmt.Println("email: ", email)
 	user, err := s.UserRepo.FindUserByEmail(email)
 	if err != nil {
 		fmt.Println("Error finding user:", err) // Print error
@@ -66,7 +67,7 @@ func (s *AuthService) Login(email, password string) (string, error) {
 	}
 
 	// Generate JWT token
-	tokenString, err := utils.GenerateJWT(user.ID.Hex(), user.EmailID)
+	tokenString, err := utils.GenerateJWT(user.ID.Hex(), user.Email)
 	if err != nil {
 		fmt.Println("Error generating JWT:", err) // Print error
 		return "", errors.New("failed to generate token")

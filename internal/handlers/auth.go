@@ -51,7 +51,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.Service.Login(credentials.EmailID, credentials.Password)
+	token, err := h.Service.Login(credentials.Email, credentials.Password)
 	if err != nil {
 		utils.SendErrorResponse(w, http.StatusUnauthorized, "Invalid credentials")
 		return
