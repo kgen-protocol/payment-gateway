@@ -7,7 +7,7 @@ import (
 type UserRequest struct {
 	FirstName      string `bson:"name,omitempty" validate:"required,min=2,max=100"`
 	LastName       string `bson:"name,omitempty" validate:"required,min=2,max=100"`
-	EmailID        string `bson:"email,omitempty" validate:"required,email"`
+	Email          string `bson:"email,omitempty" validate:"required,email"`
 	Password       string `bson:"password,omitempty" json:"password" validate:"required,min=6"`
 	MobileNumber   string `json:"mobile_number,omitempty"`
 	BillingAddress string `json:"billing_address,omitempty"`

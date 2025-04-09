@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aakritigkmit/payment-gateway/internal/model"
 	"go.mongodb.org/mongo-driver/bson"
@@ -16,22 +17,22 @@ type UserRepo struct {
 func NewUserRepo(db *mongo.Database) *UserRepo {
 	return &UserRepo{db: db.Collection("users")}
 }
+
 func (c *UserRepo) CreateUser(user model.User) (string, error) {
 	result, err := c.db.InsertOne(context.Background(), user)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	return result.InsertedID.(primitive.ObjectID).Hex(), nil
-	//
-	// Hex returns the hex encoding of the ObjectID as a string.
 }
 
 func (r *UserRepo) FindUserByEmail(email string) (*model.User, error) {
 	var user model.User
 	err := r.db.FindOne(context.Background(), bson.M{"email": email}).Decode(&user)
+	fmt.Println("user: ", user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, nil
+			return nil, fmt.Errorf("user with email %s not found", email)
 		}
 		return nil, err
 	}
