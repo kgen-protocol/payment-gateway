@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/aakritigkmit/payment-gateway/internal/config"
 	"github.com/aakritigkmit/payment-gateway/internal/routes"
@@ -20,18 +19,18 @@ type App struct {
 	db     *mongo.Database
 }
 
-// NewApp initializes a new application instance
+// NewApp initializes a new application instance.
 func NewApp() (*App, error) {
-	// Load environment variables
-	config.LoadEnv()
+	// Initialize configuration.
+	config.Init()
 
-	// Connect to the database
+	// Connect to the database.
 	db, err := utils.ConnectDB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Initialize router and setup routes
+	// Initialize router and setup routes.
 	router := chi.NewRouter()
 	routes.SetupRoutes(router, db)
 
@@ -41,28 +40,25 @@ func NewApp() (*App, error) {
 	}, nil
 }
 
-// Start runs the HTTP server with graceful shutdown
+// Start runs the HTTP server with graceful shutdown.
 func (a *App) Start(ctx context.Context) error {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
+	// Get port from our configuration singleton.
+	cfg := config.GetConfig()
 	server := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + cfg.Port,
 		Handler: a.router,
 	}
 
-	// Log server start
-	log.Println("Server running on port", port)
+	// Log server start.
+	log.Println("Server running on port", cfg.Port)
 
-	// Start the server in a goroutine
+	// Start the server in a goroutine.
 	errChan := make(chan error, 1)
 	go func() {
 		errChan <- server.ListenAndServe()
 	}()
 
-	// Graceful shutdown handling
+	// Gracefully shutdown when context is done.
 	select {
 	case err := <-errChan:
 		return fmt.Errorf("server error: %w", err)
