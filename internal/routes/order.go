@@ -19,4 +19,5 @@ func SetupOrderRoutes(r chi.Router, db *mongo.Database) {
 
 	r.Post("/place", orderHandler.PlaceOrder)
 	r.Post("/callback/success", orderHandler.HandleSuccessCallback)
+	r.Post("/callback/failure", orderHandler.HandleFailureCallback)
 }
