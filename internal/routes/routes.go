@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/go-chi/chi/v5"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -18,7 +18,7 @@ func SetupRoutes(r *chi.Mux, db *mongo.Database) {
 	apiRouter := chi.NewRouter()
 
 	for routeName, setupFunc := range routeRegistry {
-		fmt.Println("Registering route:", routeName) // Debugging log
+		log.Println("Registering route:", routeName) // Debugging log
 		apiRouter.Route("/"+routeName, func(subRouter chi.Router) {
 			setupFunc(subRouter, db)
 		})

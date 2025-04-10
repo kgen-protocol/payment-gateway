@@ -51,8 +51,6 @@ func FetchAccessToken(ctx context.Context) (TokenResponse, error) {
 func CreateOrderRequest(ctx context.Context, token string, jsonPayload []byte) (OrderAPIResponse, error) {
 	cfg := config.GetConfig()
 
-	fmt.Println("Final JSON Payload:", string(jsonPayload))
-
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.PinelabsOrderURL, bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return OrderAPIResponse{}, fmt.Errorf("failed to create HTTP request: %w", err)
@@ -75,7 +73,6 @@ func CreateOrderRequest(ctx context.Context, token string, jsonPayload []byte) (
 	if resp.StatusCode != http.StatusOK {
 		return OrderAPIResponse{}, fmt.Errorf("order creation failed: status %d, message: %+v", resp.StatusCode, response)
 	}
-	fmt.Println("response------->>>>", response)
 
 	return response, nil
 }

@@ -30,6 +30,12 @@ func NewApp() (*App, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
+	// Initialize Redis
+	utils.InitRedis()
+	if err := utils.PingRedis(context.Background()); err != nil {
+		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
+	}
+
 	// Initialize router and setup routes.
 	router := chi.NewRouter()
 	routes.SetupRoutes(router, db)
