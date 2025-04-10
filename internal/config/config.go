@@ -15,6 +15,13 @@ type Config struct {
 	ClientID     string
 	ClientSecret string
 	GrantType    string
+
+	// Pinelabs specific credentials
+	PinelabsClientID     string
+	PinelabsClientSecret string
+	PinelabsGrantType    string
+	PinelabsTokenURL     string
+	PinelabsOrderURL     string
 }
 
 var instance *Config
@@ -32,12 +39,10 @@ func getEnvWithDefault(key, defaultValue string) string {
 // Config singleton using only the required environment variables.
 // Note: You should only use the singleton from the service layer instead of calling os.Getenv directly.
 func Init() {
-	// Load .env file (for local development) if available.
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
 
-	// Initialize the config instance with required environment variables.
 	instance = &Config{
 		Port:         getEnvWithDefault("PORT", "8080"),
 		MongoURI:     getEnvWithDefault("MONGO_URI", ""),
@@ -45,6 +50,12 @@ func Init() {
 		ClientID:     getEnvWithDefault("CLIENT_ID", ""),
 		ClientSecret: getEnvWithDefault("CLIENT_SECRET", ""),
 		GrantType:    getEnvWithDefault("GRANT_TYPE", "client_credentials"),
+
+		PinelabsClientID:     getEnvWithDefault("PINELABS_CLIENT_ID", ""),
+		PinelabsClientSecret: getEnvWithDefault("PINELABS_CLIENT_SECRET", ""),
+		PinelabsGrantType:    getEnvWithDefault("PINELABS_GRANT_TYPE", "client_credentials"),
+		PinelabsTokenURL:     getEnvWithDefault("PINELABS_TOKEN_URL", ""),
+		PinelabsOrderURL:     getEnvWithDefault("PINELABS_ORDER_URL", ""),
 	}
 }
 
