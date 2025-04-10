@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
 	"github.com/aakritigkmit/payment-gateway/internal/helpers"
@@ -23,7 +22,6 @@ func NewOrderService(repo *repository.OrderRepo, transactionRepo *repository.Tra
 func (s *OrderService) PlaceOrder(ctx context.Context, req dto.PlaceOrderRequest) (utils.OrderAPIResponse, error) {
 
 	tokenResp, err := utils.FetchAccessToken(ctx)
-	fmt.Println("token", tokenResp)
 	if err != nil {
 		return utils.OrderAPIResponse{}, err
 	}
