@@ -93,3 +93,14 @@ type Address struct {
 	State    string `json:"state"`
 	Country  string `json:"country"`
 }
+
+type TransactionCallbackPayload struct {
+	TransactionReferenceId string `json:"transactionReferenceId"`
+}
+
+type UpdateOrderPayload struct {
+	Status   string  `json:"status,omitempty"`
+	Amount   float32 `json:"amount,omitempty"`
+	Currency string  `json:"currency,omitempty"`
+	UserID   string  `json:"userId,omitempty"`
+}

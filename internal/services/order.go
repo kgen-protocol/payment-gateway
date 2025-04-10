@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
 	"github.com/aakritigkmit/payment-gateway/internal/helpers"
@@ -83,10 +84,14 @@ func (s *OrderService) PlaceOrder(ctx context.Context, req dto.PlaceOrderRequest
 	}, nil
 }
 
-func (s *OrderService) HandleSuccess(ctx context.Context) {
-	// TODO: Update order status to success
-}
+func (s *OrderService) UpdateOrder(referenceID string, payload *dto.UpdateOrderPayload) error {
+	if referenceID == "" {
+		return fmt.Errorf("transaction reference ID is required")
+	}
 
-func (s *OrderService) HandleFailure(ctx context.Context) {
-	// TODO: Update order status to failure
+	if payload.Status != "" && payload.Status != "success" && payload.Status != "failed" && payload.Status != "pending" {
+		return fmt.Errorf("invalid status value")
+	}
+
+	return s.repo.UpdateOrder(referenceID, payload)
 }
