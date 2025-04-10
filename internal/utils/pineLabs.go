@@ -16,6 +16,7 @@ type TokenResponse struct {
 }
 
 type OrderAPIResponse struct {
+	Token       string `json:"token"`
 	OrderID     string `json:"order_id"`
 	RedirectURL string `json:"redirect_url"`
 }
@@ -74,6 +75,7 @@ func CreateOrderRequest(ctx context.Context, token string, jsonPayload []byte) (
 	if resp.StatusCode != http.StatusOK {
 		return OrderAPIResponse{}, fmt.Errorf("order creation failed: status %d, message: %+v", resp.StatusCode, response)
 	}
+	fmt.Println("response------->>>>", response)
 
 	return response, nil
 }

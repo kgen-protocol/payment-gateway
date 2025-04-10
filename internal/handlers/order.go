@@ -31,6 +31,7 @@ func (h *OrderHandler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.SendSuccessResponse(w, http.StatusOK, "Order placed successfully", map[string]string{
+		"token":        orderResp.Token,
 		"order_id":     orderResp.OrderID,
 		"redirect_url": orderResp.RedirectURL,
 	})
