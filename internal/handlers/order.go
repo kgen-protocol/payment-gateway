@@ -56,3 +56,20 @@ func (h *OrderHandler) HandleSuccessCallback(w http.ResponseWriter, r *http.Requ
 
 	utils.SendSuccessResponse(w, http.StatusOK, "Order status updated successfully", nil)
 }
+
+func (h *OrderHandler) HandleFailureCallback(w http.ResponseWriter, r *http.Request) {
+	var payload dto.TransactionCallbackPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	updatePayload := &dto.UpdateOrderPayload{
+		Status: "failed",
+	}
+	err := h.service.UpdateOrder(payload.TransactionReferenceId, updatePayload)
+	if err != nil {
+		utils.SendErrorResponse(w, http.StatusInternalServerError, "Failed to update order status")
+		return
+	}
+	utils.SendSuccessResponse(w, http.StatusOK, "Order status updated successfully", nil)
+}
