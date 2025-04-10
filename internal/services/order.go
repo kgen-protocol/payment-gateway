@@ -79,6 +79,7 @@ func (s *OrderService) PlaceOrder(ctx context.Context, req dto.PlaceOrderRequest
 	}
 
 	return utils.OrderAPIResponse{
+		Token:       orderResp.Token,
 		OrderID:     orderResp.OrderID,
 		RedirectURL: orderResp.RedirectURL,
 	}, nil
