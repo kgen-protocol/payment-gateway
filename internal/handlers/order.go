@@ -38,12 +38,21 @@ func (h *OrderHandler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrderHandler) HandleSuccessCallback(w http.ResponseWriter, r *http.Request) {
-	// You may want to read order ID or merchant reference from query/form data
-	h.service.HandleSuccess(r.Context())
-	utils.SendSuccessResponse(w, http.StatusOK, "Success callback received", nil)
-}
+	var payload dto.TransactionCallbackPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
 
-func (h *OrderHandler) HandleFailureCallback(w http.ResponseWriter, r *http.Request) {
-	h.service.HandleFailure(r.Context())
-	utils.SendSuccessResponse(w, http.StatusOK, "Failure callback received", nil)
+	updatePayload := &dto.UpdateOrderPayload{
+		Status: "success",
+	}
+
+	err := h.service.UpdateOrder(payload.TransactionReferenceId, updatePayload)
+	if err != nil {
+		utils.SendErrorResponse(w, http.StatusInternalServerError, "Failed to update order status")
+		return
+	}
+
+	utils.SendSuccessResponse(w, http.StatusOK, "Order status updated successfully", nil)
 }
