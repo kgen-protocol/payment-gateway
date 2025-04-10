@@ -9,8 +9,8 @@ import (
 
 // routeRegistry holds the mapping of route initialization functions
 var routeRegistry = map[string]func(r chi.Router, db *mongo.Database){
-	"auth": SetupAuthRoutes,
-	// "books": SetupBookRoutes,
+	"auth":   SetupAuthRoutes,
+	"orders": SetupOrderRoutes,
 }
 
 // SetupRoutes initializes all application routes with /api prefix
