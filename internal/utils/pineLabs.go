@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/aakritigkmit/payment-gateway/internal/config"
 )
@@ -22,8 +24,18 @@ type OrderAPIResponse struct {
 }
 
 func FetchAccessToken(ctx context.Context) (TokenResponse, error) {
+	const redisTokenKey = "pinelabs:access_token"
+
+	// Try fetching from Redis first
+	cachedToken, err := GetRedisKey(ctx, redisTokenKey)
+	if err == nil && cachedToken != "" {
+		log.Println("Using cached Pinelabs access token")
+		return TokenResponse{AccessToken: cachedToken}, nil
+	}
+
 	cfg := config.GetConfig()
 
+	// Make API call if not in Redis
 	body := map[string]string{
 		"client_id":     cfg.PinelabsClientID,
 		"client_secret": cfg.PinelabsClientSecret,
@@ -43,6 +55,11 @@ func FetchAccessToken(ctx context.Context) (TokenResponse, error) {
 	var token TokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
 		return TokenResponse{}, err
+	}
+
+	// Save token in Redis (set to expire in 55 minutes)
+	if err := SetRedisKey(ctx, redisTokenKey, token.AccessToken, 55*time.Minute); err != nil {
+		log.Printf("Failed to cache access token in Redis: %v", err)
 	}
 
 	return token, nil
