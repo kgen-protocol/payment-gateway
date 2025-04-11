@@ -38,17 +38,21 @@ func (h *OrderHandler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrderHandler) HandleSuccessCallback(w http.ResponseWriter, r *http.Request) {
-	var payload dto.TransactionCallbackPayload
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request payload")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
 	}
 
+	orderID := r.FormValue("order_id")
+	if orderID == "" {
+		http.Error(w, "Missing order_id in callback", http.StatusBadRequest)
+		return
+	}
 	updatePayload := &dto.UpdateOrderPayload{
 		Status: "success",
 	}
 
-	err := h.service.UpdateOrder(payload.TransactionReferenceId, updatePayload)
+	err := h.service.UpdateOrder(orderID, updatePayload)
 	if err != nil {
 		utils.SendErrorResponse(w, http.StatusInternalServerError, "Failed to update order status")
 		return
@@ -58,18 +62,26 @@ func (h *OrderHandler) HandleSuccessCallback(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *OrderHandler) HandleFailureCallback(w http.ResponseWriter, r *http.Request) {
-	var payload dto.TransactionCallbackPayload
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request payload")
+	// 1. Try reading from POST body (assuming Pine sends JSON)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
 	}
+
+	orderID := r.FormValue("order_id")
+	if orderID == "" {
+		http.Error(w, "Missing order_id in callback", http.StatusBadRequest)
+		return
+	}
+	// 3. Update order status to "failed"
 	updatePayload := &dto.UpdateOrderPayload{
 		Status: "failed",
 	}
-	err := h.service.UpdateOrder(payload.TransactionReferenceId, updatePayload)
-	if err != nil {
+
+	if err := h.service.UpdateOrder(orderID, updatePayload); err != nil {
 		utils.SendErrorResponse(w, http.StatusInternalServerError, "Failed to update order status")
 		return
 	}
+
 	utils.SendSuccessResponse(w, http.StatusOK, "Order status updated successfully", nil)
 }

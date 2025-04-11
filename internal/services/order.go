@@ -59,6 +59,9 @@ func (s *OrderService) PlaceOrder(ctx context.Context, req dto.PlaceOrderRequest
 				ShippingAddress: model.Address(req.PurchaseDetails.Customer.ShippingAddress),
 			},
 		},
+		PineOrderID: orderResp.OrderID,     // <- Save response
+		Token:       orderResp.Token,       // <- Save response
+		RedirectURL: orderResp.RedirectURL, //
 	}
 
 	if err := s.transactionRepo.SaveTransaction(ctx, transaction); err != nil {
