@@ -92,9 +92,5 @@ func (s *OrderService) UpdateOrder(referenceID string, payload *dto.UpdateOrderP
 		return fmt.Errorf("transaction reference ID is required")
 	}
 
-	if payload.Status != "" && payload.Status != "success" && payload.Status != "failed" && payload.Status != "pending" {
-		return fmt.Errorf("invalid status value")
-	}
-
 	return s.repo.UpdateOrder(referenceID, payload)
 }

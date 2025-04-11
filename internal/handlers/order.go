@@ -37,7 +37,7 @@ func (h *OrderHandler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *OrderHandler) HandleSuccessCallback(w http.ResponseWriter, r *http.Request) {
+func (h *OrderHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
@@ -45,41 +45,24 @@ func (h *OrderHandler) HandleSuccessCallback(w http.ResponseWriter, r *http.Requ
 
 	orderID := r.FormValue("order_id")
 	if orderID == "" {
-		http.Error(w, "Missing order_id in callback", http.StatusBadRequest)
+		http.Error(w, "Missing order_id", http.StatusBadRequest)
 		return
 	}
+
+	status := r.FormValue("status")
+	if status == "" {
+		http.Error(w, "Missing status", http.StatusBadRequest)
+		return
+	}
+
+	// Create payload with status from Plural
 	updatePayload := &dto.UpdateOrderPayload{
-		Status: "success",
+		Status: status,
 	}
 
 	err := h.service.UpdateOrder(orderID, updatePayload)
 	if err != nil {
-		utils.SendErrorResponse(w, http.StatusInternalServerError, "Failed to update order status")
-		return
-	}
-
-	utils.SendSuccessResponse(w, http.StatusOK, "Order status updated successfully", nil)
-}
-
-func (h *OrderHandler) HandleFailureCallback(w http.ResponseWriter, r *http.Request) {
-	// 1. Try reading from POST body (assuming Pine sends JSON)
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
-	}
-
-	orderID := r.FormValue("order_id")
-	if orderID == "" {
-		http.Error(w, "Missing order_id in callback", http.StatusBadRequest)
-		return
-	}
-	// 3. Update order status to "failed"
-	updatePayload := &dto.UpdateOrderPayload{
-		Status: "failed",
-	}
-
-	if err := h.service.UpdateOrder(orderID, updatePayload); err != nil {
-		utils.SendErrorResponse(w, http.StatusInternalServerError, "Failed to update order status")
+		utils.SendErrorResponse(w, http.StatusInternalServerError, "r statusFailed to update orde")
 		return
 	}
 
