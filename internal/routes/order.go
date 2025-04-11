@@ -17,6 +17,5 @@ func SetupOrderRoutes(r chi.Router, db *mongo.Database) {
 	// r.Use(middlewares.AuthMiddleware) // Apply auth middleware
 
 	r.Post("/place", orderHandler.PlaceOrder)
-	r.Post("/callback/success", orderHandler.HandleSuccessCallback)
-	r.Post("/callback/failure", orderHandler.HandleFailureCallback)
+	r.Post("/callback/order-status", orderHandler.HandleCallback)
 }
