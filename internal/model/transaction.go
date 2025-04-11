@@ -32,4 +32,7 @@ type Transaction struct {
 	CallbackURL            string             `json:"callback_url"`
 	FailureCallbackURL     string             `json:"failure_callback_url"`
 	PurchaseDetails        PurchaseDetails    `json:"purchase_details"`
+	PineOrderID            string             `json:"pine_order_id"`
+	Token                  string             `json:"token"`
+	RedirectURL            string             `json:"redirect_url"`
 }
