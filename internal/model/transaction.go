@@ -28,22 +28,6 @@ type Customer struct {
 	IsEditCustomerDetailsAllowed bool    `json:"is_edit_customer_details_allowed" bson:"is_edit_customer_details_allowed"`
 }
 
-// type Transaction struct {
-// 	ID                     primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-// 	OrderId                string             `bson:"orderId"`
-// 	MerchantOrderReference int64              `json:"merchant_order_reference"`
-// 	OrderAmount            OrderAmount        `json:"order_amount"`
-// 	PreAuth                bool               `json:"pre_auth"`
-// 	AllowedPaymentMethods  []string           `json:"allowed_payment_methods"`
-// 	Notes                  string             `json:"notes"`
-// 	CallbackURL            string             `json:"callback_url"`
-// 	FailureCallbackURL     string             `json:"failure_callback_url"`
-// 	PurchaseDetails        PurchaseDetails    `json:"purchase_details"`
-// 	PineOrderID            string             `json:"pine_order_id"`
-// 	Token                  string             `json:"token"`
-// 	RedirectURL            string             `json:"redirect_url"`
-// }
-
 type Transaction struct {
 	ID                     primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 	OrderId                string             `bson:"orderId"`

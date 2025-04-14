@@ -56,16 +56,7 @@ func (h *OrderHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create payload with status from Plural
-	updatePayload := &dto.UpdateOrderPayload{
-		Status: status,
-	}
 	go h.service.FetchAndUpdateTransactionDetails(context.Background(), orderID)
-	err := h.service.UpdateOrder(orderID, updatePayload)
-	if err != nil {
-		utils.SendErrorResponse(w, http.StatusInternalServerError, "r statusFailed to update orde")
-		return
-	}
 
 	utils.SendSuccessResponse(w, http.StatusOK, "Order status updated successfully", nil)
 }

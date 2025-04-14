@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/aakritigkmit/payment-gateway/internal/handlers"
+	middlewares "github.com/aakritigkmit/payment-gateway/internal/middleware"
 	"github.com/aakritigkmit/payment-gateway/internal/repository"
 	"github.com/aakritigkmit/payment-gateway/internal/services"
 	"github.com/go-chi/chi/v5"
@@ -16,7 +17,6 @@ func SetupOrderRoutes(r chi.Router, db *mongo.Database) {
 
 	// r.Use(middlewares.AuthMiddleware) // Apply auth middleware
 
-	r.Post("/place", orderHandler.PlaceOrder)
+	r.With(middlewares.AuthMiddleware).Post("/place", orderHandler.PlaceOrder)
 	r.Post("/callback/order-status", orderHandler.HandleCallback)
-	// r.get("/:id" , orderHandler.)
 }
