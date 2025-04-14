@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -59,7 +60,7 @@ func (h *OrderHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	updatePayload := &dto.UpdateOrderPayload{
 		Status: status,
 	}
-
+	go h.service.FetchAndUpdateTransactionDetails(context.Background(), orderID)
 	err := h.service.UpdateOrder(orderID, updatePayload)
 	if err != nil {
 		utils.SendErrorResponse(w, http.StatusInternalServerError, "r statusFailed to update orde")
