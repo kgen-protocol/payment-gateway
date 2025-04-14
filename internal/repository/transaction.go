@@ -14,7 +14,7 @@ type TransactionRepo struct {
 
 func NewTransactionRepo(db *mongo.Database) *TransactionRepo {
 	return &TransactionRepo{
-		collection: db.Collection("trasaction"),
+		collection: db.Collection("transactions"),
 	}
 }
 
