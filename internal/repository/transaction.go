@@ -13,11 +13,11 @@ type TransactionRepo struct {
 
 func NewTransactionRepo(db *mongo.Database) *TransactionRepo {
 	return &TransactionRepo{
-		collection: db.Collection("trasaction"),
+		collection: db.Collection("transactions"),
 	}
 }
 
-func (r *TransactionRepo) SaveTransaction(ctx context.Context, transaction model.Transaction) error {
+func (r *TransactionRepo) SaveTransaction(ctx context.Context, transaction *model.Transaction) error {
 	_, err := r.collection.InsertOne(ctx, transaction)
 	return err
 }

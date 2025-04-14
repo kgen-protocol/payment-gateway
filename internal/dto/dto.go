@@ -50,7 +50,6 @@ type Order struct {
 	Amount                 float32 `json:"amount"`
 	Currency               string  `json:"currency"`
 	Status                 string  `json:"status"` // pending, success, failure
-
 }
 
 type PlaceOrderRequest struct {
@@ -65,7 +64,7 @@ type PlaceOrderRequest struct {
 }
 
 type OrderAmount struct {
-	Value    float32 `json:"value"`
+	Value    float64 `json:"value"`
 	Currency string  `json:"currency"`
 }
 
@@ -75,13 +74,15 @@ type PurchaseDetail struct {
 }
 
 type Customer struct {
-	EmailID         string  `json:"email_id"`
-	FirstName       string  `json:"first_name"`
-	LastName        string  `json:"last_name"`
-	CustomerID      string  `json:"customer_id"`
-	MobileNumber    string  `json:"mobile_number"`
-	BillingAddress  Address `json:"billing_address"`
-	ShippingAddress Address `json:"shipping_address"`
+	EmailID                      string  `json:"email_id"`
+	FirstName                    string  `json:"first_name"`
+	LastName                     string  `json:"last_name"`
+	CustomerID                   string  `json:"customer_id"`
+	MobileNumber                 string  `json:"mobile_number"`
+	BillingAddress               Address `json:"billing_address"`
+	ShippingAddress              Address `json:"shipping_address"`
+	CountryCode                  string  `json:"country_code"`
+	IsEditCustomerDetailsAllowed bool    `json:"is_edit_customer_details_allowed" `
 }
 
 type Address struct {

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aakritigkmit/payment-gateway/internal/config"
+	"github.com/aakritigkmit/payment-gateway/internal/dto"
 )
 
 type TokenResponse struct {
@@ -92,4 +93,42 @@ func CreateOrderRequest(ctx context.Context, token string, jsonPayload []byte) (
 	}
 
 	return response, nil
+}
+
+func GetOrderByIDFromPinelabs(ctx context.Context, token string, pineOrderID string) (*dto.PinelabsOrderDetailResponse, error) {
+	cfg := config.GetConfig()
+
+	// Build request URL
+	url := fmt.Sprintf("%s/%s", cfg.PinelabsGetOrderURL, pineOrderID)
+
+	// Build request
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	// Send request
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check for non-200
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch order details: status %d", resp.StatusCode)
+	}
+
+	// Decode response into your DTO
+	var result struct {
+		Data dto.PinelabsOrderDetailResponse `json:"data"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &result.Data, nil
 }

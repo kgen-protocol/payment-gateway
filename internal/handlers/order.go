@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
@@ -49,20 +50,28 @@ func (h *OrderHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("orderID: ", orderID)
+
 	status := r.FormValue("status")
 	if status == "" {
 		http.Error(w, "Missing status", http.StatusBadRequest)
 		return
 	}
 
-	// Create payload with status from Plural
-	updatePayload := &dto.UpdateOrderPayload{
-		Status: status,
-	}
+	// // Create payload with status from Plural
+	// updatePayload := &dto.UpdateOrderPayload{
+	// 	Status: status,
+	// }
 
-	err := h.service.UpdateOrder(orderID, updatePayload)
-	if err != nil {
-		utils.SendErrorResponse(w, http.StatusInternalServerError, "r statusFailed to update orde")
+	// err := h.service.UpdateOrder(orderID, updatePayload)
+	// if err != nil {
+	// 	utils.SendErrorResponse(w, http.StatusInternalServerError, "r statusFailed to update orde")
+	// 	return
+	// }
+
+	if err := h.service.SyncOrderDataFromPinelabs(r.Context(), orderID); err != nil {
+		fmt.Println("error: ", err)
+		utils.SendErrorResponse(w, http.StatusInternalServerError, "Failed to sync order data")
 		return
 	}
 

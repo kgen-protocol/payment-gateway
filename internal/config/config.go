@@ -24,6 +24,7 @@ type Config struct {
 	PinelabsGrantType    string
 	PinelabsTokenURL     string
 	PinelabsOrderURL     string
+	PinelabsGetOrderURL  string
 
 	// Redis configuration
 	RedisHost     string
@@ -82,6 +83,7 @@ func Init() {
 		PinelabsGrantType:    getEnvWithDefault("PINELABS_GRANT_TYPE", "client_credentials"),
 		PinelabsTokenURL:     getEnvWithDefault("PINELABS_TOKEN_URL", ""),
 		PinelabsOrderURL:     getEnvWithDefault("PINELABS_ORDER_URL", ""),
+		PinelabsGetOrderURL:  getEnvWithDefault("PINELABS_GET_ORDER_URL", ""),
 
 		RedisHost:     host,
 		RedisPort:     port,
