@@ -27,13 +27,18 @@ func (s *OrderService) FetchAndUpdateTransactionDetails(ctx context.Context, ord
 		// Use background context to detach from request lifecycle
 		bgCtx := context.Background()
 
-		data, err := utils.GetOrderDetails(bgCtx, orderID)
+		tokenResp, err := utils.FetchAccessToken(ctx)
+		if err != nil {
+			return
+		}
+
+		data, err := utils.GetOrderDetails(bgCtx, tokenResp.AccessToken, orderID)
 
 		jsonBytes, _ := json.MarshalIndent(data, "", "  ")
 		fmt.Println(string(jsonBytes))
 		fmt.Println("Updating transaction with data:", data)
 		if err != nil {
-			// Optional: log the error
+			fmt.Println("err:", err)
 			return
 		}
 
@@ -43,9 +48,8 @@ func (s *OrderService) FetchAndUpdateTransactionDetails(ctx context.Context, ord
 
 		// Save or update transaction in your DB
 		err = s.transactionRepo.UpdateTransactionByOrderID(bgCtx, orderID, transactionModel)
-		fmt.Println("Updating transaction with err:", err)
 		if err != nil {
-			// Optional: log the error
+			fmt.Println("err:", err)
 		}
 	}()
 }
@@ -67,7 +71,7 @@ func (s *OrderService) PlaceOrder(ctx context.Context, req dto.PlaceOrderRequest
 	}
 
 	transaction := model.Transaction{
-		MerchantOrderReference: req.MerchantOrderReference,
+		MerchantOrderReference: string(rune(req.MerchantOrderReference)),
 		OrderAmount: model.OrderAmount{
 			Value:    req.OrderAmount.Value,
 			Currency: req.OrderAmount.Currency,

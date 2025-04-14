@@ -62,9 +62,6 @@ func BuildOrderPayload(req dto.PlaceOrderRequest) ([]byte, error) {
 
 func MapPineOrderToTransactionModel(data *dto.PineOrderResponse) model.Transaction {
 	payments := make([]model.Payment, 0)
-	fmt.Println("payments data", data)
-	jsonBytes, _ := json.MarshalIndent(data.Data.Payments, "", "  ")
-	fmt.Println("orderResp data from Get order by ID API", string(jsonBytes))
 
 	for _, p := range data.Data.Payments {
 		payments = append(payments, model.Payment{
@@ -88,7 +85,6 @@ func MapPineOrderToTransactionModel(data *dto.PineOrderResponse) model.Transacti
 		})
 
 	}
-	fmt.Println("payments", payments)
 
 	return model.Transaction{
 		OrderId:                data.Data.OrderID,

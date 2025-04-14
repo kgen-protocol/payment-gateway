@@ -56,7 +56,7 @@ type Order struct {
 }
 
 type PlaceOrderRequest struct {
-	MerchantOrderReference string         `json:"merchant_order_reference"`
+	MerchantOrderReference int64          `json:"merchant_order_reference"`
 	OrderAmount            OrderAmount    `json:"order_amount"`
 	PreAuth                bool           `json:"pre_auth"`
 	AllowedPaymentMethods  []string       `json:"allowed_payment_methods"`
