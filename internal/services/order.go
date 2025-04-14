@@ -2,9 +2,11 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
+
 	"github.com/aakritigkmit/payment-gateway/internal/helpers"
 	"github.com/aakritigkmit/payment-gateway/internal/model"
 	"github.com/aakritigkmit/payment-gateway/internal/repository"
@@ -18,6 +20,34 @@ type OrderService struct {
 
 func NewOrderService(repo *repository.OrderRepo, transactionRepo *repository.TransactionRepo) *OrderService {
 	return &OrderService{repo, transactionRepo}
+}
+
+func (s *OrderService) FetchAndUpdateTransactionDetails(ctx context.Context, orderID string) {
+	go func() {
+		// Use background context to detach from request lifecycle
+		bgCtx := context.Background()
+
+		data, err := utils.GetOrderDetails(bgCtx, orderID)
+
+		jsonBytes, _ := json.MarshalIndent(data, "", "  ")
+		fmt.Println(string(jsonBytes))
+		fmt.Println("Updating transaction with data:", data)
+		if err != nil {
+			// Optional: log the error
+			return
+		}
+
+		// Parse and update the existing transaction and order in DB
+		transactionModel := helpers.MapPineOrderToTransactionModel(data)
+		fmt.Println("Updating transaction with transactionModel:", transactionModel)
+
+		// Save or update transaction in your DB
+		err = s.transactionRepo.UpdateTransactionByOrderID(bgCtx, orderID, transactionModel)
+		fmt.Println("Updating transaction with err:", err)
+		if err != nil {
+			// Optional: log the error
+		}
+	}()
 }
 
 func (s *OrderService) PlaceOrder(ctx context.Context, req dto.PlaceOrderRequest) (utils.OrderAPIResponse, error) {
@@ -59,9 +89,9 @@ func (s *OrderService) PlaceOrder(ctx context.Context, req dto.PlaceOrderRequest
 				ShippingAddress: model.Address(req.PurchaseDetails.Customer.ShippingAddress),
 			},
 		},
-		PineOrderID: orderResp.OrderID,     // <- Save response
-		Token:       orderResp.Token,       // <- Save response
-		RedirectURL: orderResp.RedirectURL, //
+		PineOrderID: orderResp.OrderID,
+		Token:       orderResp.Token,
+		RedirectURL: orderResp.RedirectURL,
 	}
 
 	if err := s.transactionRepo.SaveTransaction(ctx, transaction); err != nil {
@@ -79,12 +109,13 @@ func (s *OrderService) PlaceOrder(ctx context.Context, req dto.PlaceOrderRequest
 	if err := s.repo.SaveOrder(ctx, order); err != nil {
 		return utils.OrderAPIResponse{}, err
 	}
-
+	// s.FetchAndUpdateTransactionDetails(ctx, orderResp.OrderID)
 	return utils.OrderAPIResponse{
 		Token:       orderResp.Token,
 		OrderID:     orderResp.OrderID,
 		RedirectURL: orderResp.RedirectURL,
 	}, nil
+
 }
 
 func (s *OrderService) UpdateOrder(referenceID string, payload *dto.UpdateOrderPayload) error {

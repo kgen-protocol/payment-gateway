@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/aakritigkmit/payment-gateway/internal/config"
+	"github.com/aakritigkmit/payment-gateway/internal/dto"
 )
 
 type TokenResponse struct {
@@ -92,4 +94,112 @@ func CreateOrderRequest(ctx context.Context, token string, jsonPayload []byte) (
 	}
 
 	return response, nil
+}
+
+// func GetOrderDetails(ctx context.Context, accessToken string, orderID string) (*dto.PineOrderResponse, error) {
+// 	url := fmt.Sprintf("https://pluraluat.v2.pinepg.in/api/pay/v1/orders/%s", orderID)
+// 	req, _ := http.NewRequest("GET", url, nil)
+// 	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+// 	client := &http.Client{}
+// 	resp, err := client.Do(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer resp.Body.Close()
+
+// 	var data dto.PineOrderResponse
+// 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+// 		return nil, err
+// 	}
+
+// 	return &data, nil
+// }
+
+// func GetOrderDetails(ctx context.Context, orderID string) (*dto.PineOrderResponse, error) {
+// 	cfg := config.GetConfig()
+
+// 	// Build request URL
+// 	url := fmt.Sprintf("%s/%s", cfg.PinelabsOrderURL, orderID)
+
+// 	// Get the token (assuming this helper exists)
+// 	token, err := FetchAccessToken(ctx)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to get token: %w", err)
+// 	}
+
+// 	// Build request
+// 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to create request: %w", err)
+// 	}
+// 	req.Header.Set("Content-Type", "application/json")
+// 	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+
+// 	// Send request
+// 	resp, err := http.DefaultClient.Do(req)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("HTTP request failed: %w", err)
+// 	}
+// 	defer resp.Body.Close()
+
+// 	// Check for non-200
+
+// 	if resp.StatusCode != http.StatusOK {
+// 		bodyBytes, _ := io.ReadAll(resp.Body)
+// 		return nil, fmt.Errorf("non-200 response: %d, body: %s", resp.StatusCode, string(bodyBytes))
+// 	}
+
+// 	// Decode response into your DTO
+
+// 	var data dto.PineOrderResponse
+// 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+// 		return nil, fmt.Errorf("failed to decode response: %w", err)
+// 	}
+
+// 	return &data, nil
+// }
+
+func GetOrderDetails(ctx context.Context, orderID string) (*dto.PineOrderResponse, error) {
+	url := fmt.Sprintf("https://pluraluat.v2.pinepg.in/api/pay/v1/orders/%s", orderID)
+	fmt.Println("Pine request URL:", url)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	// 	// Get the token (assuming this helper exists)
+	token, err := FetchAccessToken(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token: %w", err)
+	}
+	fmt.Println("Fetched token:", token.AccessToken)
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Read and parse body
+	body, err := ioutil.ReadAll(resp.Body)
+	log.Println("📥 Pine API Response Status:", resp.Status)
+	log.Println("📥 Pine API Response Body:", string(body))
+	if err != nil {
+		return nil, err
+	}
+
+	var data dto.PineOrderResponse
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, err
+	}
+	jsonBytes, _ := json.MarshalIndent(data, "", "  ")
+	fmt.Println("orderResp data from Get order by ID API", string(jsonBytes))
+	fmt.Println("orderResp", data)
+	return &data, nil
+
 }

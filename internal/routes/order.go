@@ -18,4 +18,5 @@ func SetupOrderRoutes(r chi.Router, db *mongo.Database) {
 
 	r.Post("/place", orderHandler.PlaceOrder)
 	r.Post("/callback/order-status", orderHandler.HandleCallback)
+	// r.get("/:id" , orderHandler.)
 }

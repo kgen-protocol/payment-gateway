@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
+	"github.com/aakritigkmit/payment-gateway/internal/model"
 )
 
 // StructToMap converts a struct to a map[string]interface{}
@@ -57,4 +58,67 @@ func BuildOrderPayload(req dto.PlaceOrderRequest) ([]byte, error) {
 	}
 
 	return jsonBytes, nil
+}
+
+func MapPineOrderToTransactionModel(data *dto.PineOrderResponse) model.Transaction {
+	payments := make([]model.Payment, 0)
+	fmt.Println("payments data", data)
+	jsonBytes, _ := json.MarshalIndent(data.Data.Payments, "", "  ")
+	fmt.Println("orderResp data from Get order by ID API", string(jsonBytes))
+
+	for _, p := range data.Data.Payments {
+		payments = append(payments, model.Payment{
+			ID:                       p.ID,
+			MerchantPaymentReference: p.MerchantPaymentReference,
+			Status:                   p.Status,
+			PaymentMethod:            p.PaymentMethod,
+			PaymentAmount: model.OrderAmount{
+				Value:    p.PaymentAmount.Value,
+				Currency: p.PaymentAmount.Currency,
+			},
+			AcquirerData: model.AcquirerData{
+				ApprovalCode:      p.AcquirerData.ApprovalCode,
+				AcquirerReference: p.AcquirerData.AcquirerReference,
+				RRN:               p.AcquirerData.RRN,
+				IsAggregator:      p.AcquirerData.IsAggregator,
+				AcquirerName:      p.AcquirerData.AcquirerName,
+			},
+			CreatedAt: p.CreatedAt,
+			UpdatedAt: p.UpdatedAt,
+		})
+
+	}
+	fmt.Println("payments", payments)
+
+	return model.Transaction{
+		OrderId:                data.Data.OrderID,
+		MerchantOrderReference: data.Data.MerchantOrderReference,
+		OrderAmount: model.OrderAmount{
+			Value:    data.Data.OrderAmount.Value,
+			Currency: data.Data.OrderAmount.Currency,
+		},
+		PreAuth:               data.Data.PreAuth,
+		AllowedPaymentMethods: data.Data.AllowedPaymentMethods,
+		Notes:                 data.Data.Notes,
+		CallbackURL:           data.Data.CallbackURL,
+		FailureCallbackURL:    data.Data.FailureCallbackURL,
+		PurchaseDetails: model.PurchaseDetails{
+			Customer: model.Customer{
+				EmailID:         data.Data.PurchaseDetails.Customer.EmailID,
+				FirstName:       data.Data.PurchaseDetails.Customer.FirstName,
+				LastName:        data.Data.PurchaseDetails.Customer.LastName,
+				CustomerID:      data.Data.PurchaseDetails.Customer.CustomerID,
+				MobileNumber:    data.Data.PurchaseDetails.Customer.MobileNumber,
+				BillingAddress:  model.Address(data.Data.PurchaseDetails.Customer.BillingAddress),
+				ShippingAddress: model.Address(data.Data.PurchaseDetails.Customer.ShippingAddress),
+			},
+			MerchantMetadata: data.Data.PurchaseDetails.MerchantMetadata,
+		},
+		PineOrderID:     data.Data.OrderID,
+		Status:          data.Data.Status,
+		IntegrationMode: data.Data.IntegrationMode,
+		Payments:        payments,
+		CreatedAt:       data.Data.CreatedAt,
+		UpdatedAt:       data.Data.UpdatedAt,
+	}
 }
