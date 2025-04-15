@@ -29,7 +29,6 @@ func (c *UserRepo) CreateUser(user model.User) (string, error) {
 func (r *UserRepo) FindUserByEmail(email string) (*model.User, error) {
 	var user model.User
 	err := r.db.FindOne(context.Background(), bson.M{"email": email}).Decode(&user)
-	fmt.Println("user: ", user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, fmt.Errorf("user with email %s not found", email)

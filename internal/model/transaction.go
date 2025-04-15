@@ -32,6 +32,8 @@ type Transaction struct {
 	ID                     primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 	OrderId                string             `bson:"orderId"`
 	MerchantOrderReference string             `json:"merchant_order_reference"`
+	Type                   string             `json:"type"`
+	MerchantID             string             `json:"merchant_id"`
 	OrderAmount            OrderAmount        `json:"order_amount"`
 	PreAuth                bool               `json:"pre_auth"`
 	AllowedPaymentMethods  []string           `json:"allowed_payment_methods"`
