@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
 
@@ -108,6 +109,8 @@ func (s *OrderService) PlaceOrder(ctx context.Context, req dto.PlaceOrderRequest
 		Amount:                 req.OrderAmount.Value,
 		Currency:               req.OrderAmount.Currency,
 		Status:                 "Pending",
+		CreatedAt:              time.Now(),
+		UpdatedAt:              time.Now(),
 	}
 
 	if err := s.repo.SaveOrder(ctx, order); err != nil {

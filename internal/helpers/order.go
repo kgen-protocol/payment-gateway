@@ -96,6 +96,8 @@ func MapPineOrderToTransactionModel(data *dto.PineOrderResponse) model.Transacti
 		PreAuth:               data.Data.PreAuth,
 		AllowedPaymentMethods: data.Data.AllowedPaymentMethods,
 		Notes:                 data.Data.Notes,
+		Type:                  data.Data.Type,
+		MerchantID:            data.Data.MerchantID,
 		CallbackURL:           data.Data.CallbackURL,
 		FailureCallbackURL:    data.Data.FailureCallbackURL,
 		PurchaseDetails: model.PurchaseDetails{
