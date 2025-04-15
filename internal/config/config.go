@@ -25,7 +25,9 @@ type Config struct {
 	PinelabsTokenURL     string
 	PinelabsOrderURL     string
 	PinelabsGetOrderURL  string
-
+	//Dt_one configuration
+	DtOneUsername string
+	DtOnePassword string
 	// Redis configuration
 	RedisHost     string
 	RedisPort     string
@@ -84,6 +86,8 @@ func Init() {
 		PinelabsTokenURL:     getEnvWithDefault("PINELABS_TOKEN_URL", ""),
 		PinelabsOrderURL:     getEnvWithDefault("PINELABS_ORDER_URL", ""),
 		PinelabsGetOrderURL:  getEnvWithDefault("PINELABS_GET_ORDER_URL", ""),
+		DtOneUsername:        getEnvWithDefault("DTONE_USERNAME", ""),
+		DtOnePassword:        getEnvWithDefault("DTONE_PASSWORD", ""),
 
 		RedisHost:     host,
 		RedisPort:     port,
