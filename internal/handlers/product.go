@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/aakritigkmit/payment-gateway/internal/services"
+	"github.com/aakritigkmit/payment-gateway/internal/utils"
 )
 
 type ProductHandler struct {
@@ -15,14 +16,15 @@ func NewProductHandler(service *services.ProductService) *ProductHandler {
 	return &ProductHandler{service}
 }
 
-func (h *ProductHandler) SyncProductsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) SyncProducts(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+
 	err := h.service.SyncProducts(ctx)
 	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "Failed to sync products: "+err.Error(), http.StatusInternalServerError)
+		fmt.Println("err: ", err)
+		utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("✅ Product sync completed"))
+
+	utils.SendSuccessResponse(w, http.StatusOK, "Products fetched and saved successfully", nil)
 }

@@ -10,7 +10,7 @@ type Product struct {
 	Description                         string             `json:"description"`
 	Destination                         Amount             `json:"destination"`
 	ID                                  primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	ProductId                           int                `bson:"product_id,omitempty" json:"id"`
+	UniqueId                            int                `bson:"unique_id,omitempty" json:"id"`
 	Name                                string             `json:"name"`
 	Operator                            Operator           `json:"operator"`
 	Prices                              Prices             `json:"prices"`

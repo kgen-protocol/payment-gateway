@@ -1,86 +1,47 @@
-// package utils
-
-// import (
-// 	"encoding/base64"
-// 	"encoding/json"
-// 	"fmt"
-// 	"io"
-// 	"net/http"
-// 	"os"
-// 	"time"
-
-// 	"github.com/aakritigkmit/payment-gateway/internal/dto"
-// )
-
-// // const defaultLimit = 100
-
-// func FetchProductsChunk(offset int, limit int) ([]dto.Product, error) {
-// 	username := os.Getenv("DTONE_USERNAME")
-// 	password := os.Getenv("DTONE_PASSWORD")
-// 	baseURL := os.Getenv("DTONE_BASE_URL")
-
-// 	auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password)))
-// 	url := fmt.Sprintf("%s/v1/products?offset=%d&limit=%d", baseURL, offset, limit)
-
-// 	req, _ := http.NewRequest("GET", url, nil)
-// 	req.Header.Set("Authorization", "Basic "+auth)
-// 	req.Header.Set("Content-Type", "application/json")
-
-// 	client := &http.Client{Timeout: 60 * time.Second}
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to call DTOne API: %w", err)
-// 	}
-// 	defer resp.Body.Close()
-
-// 	if resp.StatusCode != 200 {
-// 		body, _ := io.ReadAll(resp.Body)
-// 		return nil, fmt.Errorf("DTOne API error: %s", string(body))
-// 	}
-
-// 	var products []dto.Product
-// 	body, _ := io.ReadAll(resp.Body)
-// 	if err := json.Unmarshal(body, &products); err != nil {
-// 		return nil, fmt.Errorf("error decoding response: %w", err)
-// 	}
-
-//		return products, nil
-//	}
 package utils
 
 import (
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
+	"github.com/aakritigkmit/payment-gateway/internal/config"
 	"github.com/aakritigkmit/payment-gateway/internal/model"
 )
 
-func FetchProductsFromDTOneAPI(username, password string) ([]model.Product, error) {
-	req, err := http.NewRequest("GET", "https://preprod-dvs-api.dtone.com/v1/products", nil)
-	if err != nil {
-		return nil, err
-	}
-	req.SetBasicAuth(username, password)
+func FetchDTOneProducts(ctx context.Context) ([]model.Product, error) {
+	cfg := config.GetConfig()
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	// Construct Basic Auth
+	auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", cfg.DtOneUsername, cfg.DtOnePassword)))
+
+	// Create HTTP request
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.DtOneProductsURL, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Basic "+auth)
+
+	// Execute the request
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
-		fmt.Println("Raw body:", string(body))
-		return nil, fmt.Errorf("API error: %s", body)
-	}
-
+	// Decode response body
 	var products []model.Product
 	if err := json.NewDecoder(resp.Body).Decode(&products); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
-	return products, nil
 
+	// Check for non-200 status codes
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch products: status %d, response: %+v", resp.StatusCode, products)
+	}
+
+	return products, nil
 }
