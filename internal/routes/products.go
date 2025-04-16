@@ -11,8 +11,12 @@ import (
 
 func SetupProductRoutes(r chi.Router, db *mongo.Database) {
 	productRepo := repository.NewProductRepo(db)
-	productService := services.NewProductService(productRepo)
+	productTransactionRepo := repository.NewProductTransactionRepo(db) // New ProductTransactionRepo
+
+	productService := services.NewProductService(productRepo, productTransactionRepo) // Updated service with new repo
 	productHandler := handlers.NewProductHandler(productService)
 
+	// Define routes
 	r.With(middlewares.AuthMiddleware).Post("/sync", productHandler.SyncProducts)
+	r.With(middlewares.AuthMiddleware).Post("/transaction", productHandler.HandleProductTransaction)
 }

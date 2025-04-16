@@ -1,104 +1,136 @@
 package model
 
 import (
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Product struct {
-	AvailabilityZones                   []string           `json:"availability_zones"`
-	Benefits                            []Benefit          `json:"benefits"`
-	Description                         string             `json:"description"`
-	Destination                         Amount             `json:"destination"`
-	ID                                  primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	UniqueId                            int                `bson:"unique_id,omitempty" json:"id"`
-	Name                                string             `json:"name"`
-	Operator                            Operator           `json:"operator"`
-	Prices                              Prices             `json:"prices"`
-	Promotions                          interface{}        `json:"promotions"` // or a specific type if known
-	Rates                               Rates              `json:"rates"`
-	Regions                             interface{}        `json:"regions"` // can be []Region if needed
-	RequiredAdditionalIdentifierFields  interface{}        `json:"required_additional_identifier_fields"`
-	RequiredBeneficiaryFields           interface{}        `json:"required_beneficiary_fields"`
-	RequiredCreditPartyIdentifierFields [][]string         `json:"required_credit_party_identifier_fields"`
-	RequiredDebitPartyIdentifierFields  interface{}        `json:"required_debit_party_identifier_fields"`
-	RequiredSenderFields                interface{}        `json:"required_sender_fields"`
-	RequiredStatementIdentifierFields   interface{}        `json:"required_statement_identifier_fields"`
-	Service                             Service            `json:"service"`
-	Source                              Amount             `json:"source"`
-	Tags                                interface{}        `json:"tags"` // or []string if tags are string-based
-	Type                                string             `json:"type"`
-	Validity                            Validity           `json:"validity"`
-}
-
-type Benefit struct {
-	AdditionalInformation interface{}     `json:"additional_information"`
-	Amount                AmountBreakdown `json:"amount"`
-	Type                  string          `json:"type"`
-	Unit                  string          `json:"unit"`
-	UnitType              string          `json:"unit_type"`
-}
-
-type AmountBreakdown struct {
-	Base              interface{} `json:"base"`
-	PromotionBonus    interface{} `json:"promotion_bonus"`
-	TotalExcludingTax interface{} `json:"total_excluding_tax"`
-	TotalIncludingTax interface{} `json:"total_including_tax"`
-}
-
-type AmountWithFee struct {
-	Amount   interface{} `json:"amount"`
-	Fee      interface{} `json:"fee"`
-	Unit     string      `json:"unit"`
-	UnitType string      `json:"unit_type"`
-}
-
 type Amount struct {
-	Amount   interface{} `json:"amount"`
-	Unit     string      `json:"unit"`
-	UnitType string      `json:"unit_type"`
-}
-
-type Operator struct {
-	Country Country     `json:"country"`
-	ID      int         `json:"id"`
-	Name    string      `json:"name"`
-	Regions interface{} `json:"regions"` // or []Region if regions are consistent
-}
-
-type Country struct {
-	ISOCode string   `json:"iso_code"`
-	Name    string   `json:"name"`
-	Regions []Region `json:"regions"`
-}
-
-type Region struct {
-	Code string `json:"code"`
-	Name string `json:"name"`
+	Base              float64 `bson:"base" json:"base"`
+	PromotionBonus    float64 `bson:"promotion_bonus" json:"promotion_bonus"`
+	TotalExcludingTax float64 `bson:"total_excluding_tax" json:"total_excluding_tax"`
+	TotalIncludingTax float64 `bson:"total_including_tax" json:"total_including_tax"`
 }
 
 type Prices struct {
-	Retail    interface{} `json:"retail"` // nullable or specific price type
-	Wholesale Amount      `json:"wholesale"`
+	Retail    interface{} `bson:"retail" json:"retail"`
+	Wholesale Wholesale   `bson:"wholesale" json:"wholesale"`
+}
+
+type Wholesale struct {
+	Amount   float64 `bson:"amount" json:"amount"`
+	Fee      float64 `bson:"fee" json:"fee"`
+	Unit     string  `bson:"unit" json:"unit"`
+	UnitType string  `bson:"unit_type" json:"unit_type"`
 }
 
 type Rates struct {
-	Base      float64     `json:"base"`
-	Retail    interface{} `json:"retail"`
-	Wholesale float64     `json:"wholesale"`
+	Base      float64     `bson:"base" json:"base"`
+	Retail    interface{} `bson:"retail" json:"retail"`
+	Wholesale float64     `bson:"wholesale" json:"wholesale"`
+}
+
+type Operator struct {
+	ID      int         `bson:"id" json:"id"`
+	Name    string      `bson:"name" json:"name"`
+	Country Country     `bson:"country" json:"country"`
+	Regions interface{} `bson:"regions" json:"regions"`
+}
+
+type Country struct {
+	ISOCode string   `bson:"iso_code" json:"iso_code"`
+	Name    string   `bson:"name" json:"name"`
+	Regions []Region `bson:"regions" json:"regions"`
+}
+
+type Region struct {
+	Code string `bson:"code" json:"code"`
+	Name string `bson:"name" json:"name"`
 }
 
 type Service struct {
-	ID         int        `json:"id"`
-	Name       string     `json:"name"`
-	Subservice Subservice `json:"subservice"`
+	ID         int        `bson:"id" json:"id"`
+	Name       string     `bson:"name" json:"name"`
+	SubService SubService `bson:"subservice" json:"subservice"`
 }
 
-type Subservice struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+type SubService struct {
+	ID   int    `bson:"id" json:"id"`
+	Name string `bson:"name" json:"name"`
 }
 
+type Status struct {
+	Class   StatusClass `bson:"class" json:"class"`
+	ID      int         `bson:"id" json:"id"`
+	Message string      `bson:"message" json:"message"`
+}
+
+type StatusClass struct {
+	ID      int    `bson:"id" json:"id"`
+	Message string `bson:"message" json:"message"`
+}
+
+// Product Model
+type Product struct {
+	AvailabilityZones                   []string           `bson:"availability_zones" json:"availability_zones"`
+	Benefits                            []Benefit          `bson:"benefits" json:"benefits"`
+	Description                         string             `bson:"description" json:"description"`
+	Destination                         Amount             `bson:"destination" json:"destination"`
+	ID                                  primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	UniqueId                            int                `bson:"unique_id,omitempty" json:"id"`
+	Name                                string             `bson:"name" json:"name"`
+	Operator                            Operator           `bson:"operator" json:"operator"`
+	Prices                              Prices             `bson:"prices" json:"prices"`
+	Promotions                          interface{}        `bson:"promotions" json:"promotions"`
+	Rates                               Rates              `bson:"rates" json:"rates"`
+	Regions                             interface{}        `bson:"regions" json:"regions"`
+	RequiredAdditionalIdentifierFields  interface{}        `bson:"required_additional_identifier_fields" json:"required_additional_identifier_fields"`
+	RequiredBeneficiaryFields           interface{}        `bson:"required_beneficiary_fields" json:"required_beneficiary_fields"`
+	RequiredCreditPartyIdentifierFields [][]string         `bson:"required_credit_party_identifier_fields" json:"required_credit_party_identifier_fields"`
+	RequiredDebitPartyIdentifierFields  interface{}        `bson:"required_debit_party_identifier_fields" json:"required_debit_party_identifier_fields"`
+	RequiredSenderFields                interface{}        `bson:"required_sender_fields" json:"required_sender_fields"`
+	RequiredStatementIdentifierFields   interface{}        `bson:"required_statement_identifier_fields" json:"required_statement_identifier_fields"`
+	Service                             Service            `bson:"service" json:"service"`
+	Source                              Amount             `bson:"source" json:"source"`
+	Tags                                interface{}        `bson:"tags" json:"tags"`
+	Type                                string             `bson:"type" json:"type"`
+	Validity                            Validity           `bson:"validity" json:"validity"`
+}
+
+// Benefit Model
+type Benefit struct {
+	AdditionalInformation interface{} `bson:"additional_information" json:"additional_information"`
+	Amount                Amount      `bson:"amount" json:"amount"`
+	Type                  string      `bson:"type" json:"type"`
+	Unit                  string      `bson:"unit" json:"unit"`
+	UnitType              string      `bson:"unit_type" json:"unit_type"`
+}
+
+// ProductTransaction Model
+type ProductTransaction struct {
+	Benefits                   []Benefit             `bson:"benefits" json:"benefits"`
+	ConfirmationDate           time.Time             `bson:"confirmation_date" json:"confirmation_date"`
+	ConfirmationExpirationDate time.Time             `bson:"confirmation_expiration_date" json:"confirmation_expiration_date"`
+	CreationDate               time.Time             `bson:"creation_date" json:"creation_date"`
+	CreditPartyIdentifier      CreditPartyIdentifier `bson:"credit_party_identifier" json:"credit_party_identifier"`
+	ExternalID                 string                `bson:"external_id" json:"external_id"`
+	ID                         int64                 `bson:"id" json:"id"`
+	OperatorReference          string                `bson:"operator_reference" json:"operator_reference"`
+	Prices                     Prices                `bson:"prices" json:"prices"`
+	Product                    Product               `bson:"product" json:"product"`
+	Promotions                 interface{}           `bson:"promotions" json:"promotions"`
+	Rates                      Rates                 `bson:"rates" json:"rates"`
+	Status                     Status                `bson:"status" json:"status"`
+}
+
+// CreditPartyIdentifier Model
+type CreditPartyIdentifier struct {
+	MobileNumber string `bson:"mobile_number" json:"mobile_number"`
+}
+
+// Validity Model
 type Validity struct {
-	Quantity int    `json:"quantity"`
-	Unit     string `json:"unit"`
+	Quantity int    `bson:"quantity" json:"quantity"`
+	Unit     string `bson:"unit" json:"unit"`
 }
