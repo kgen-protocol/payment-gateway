@@ -7,10 +7,10 @@ import (
 )
 
 type Amount struct {
-	Base              float64 `bson:"base" json:"base"`
-	PromotionBonus    float64 `bson:"promotion_bonus" json:"promotion_bonus"`
-	TotalExcludingTax float64 `bson:"total_excluding_tax" json:"total_excluding_tax"`
-	TotalIncludingTax float64 `bson:"total_including_tax" json:"total_including_tax"`
+	Base              interface{} `bson:"base" json:"base"`
+	PromotionBonus    interface{} `bson:"promotion_bonus" json:"promotion_bonus"`
+	TotalExcludingTax interface{} `bson:"total_excluding_tax" json:"total_excluding_tax"`
+	TotalIncludingTax interface{} `bson:"total_including_tax" json:"total_including_tax"`
 }
 
 type Prices struct {
@@ -19,16 +19,16 @@ type Prices struct {
 }
 
 type Wholesale struct {
-	Amount   float64 `bson:"amount" json:"amount"`
-	Fee      float64 `bson:"fee" json:"fee"`
-	Unit     string  `bson:"unit" json:"unit"`
-	UnitType string  `bson:"unit_type" json:"unit_type"`
+	Amount   interface{} `bson:"amount" json:"amount"`
+	Fee      interface{} `bson:"fee" json:"fee"`
+	Unit     string      `bson:"unit" json:"unit"`
+	UnitType string      `bson:"unit_type" json:"unit_type"`
 }
 
 type Rates struct {
-	Base      float64     `bson:"base" json:"base"`
+	Base      interface{} `bson:"base" json:"base"`
 	Retail    interface{} `bson:"retail" json:"retail"`
-	Wholesale float64     `bson:"wholesale" json:"wholesale"`
+	Wholesale interface{} `bson:"wholesale" json:"wholesale"`
 }
 
 type Operator struct {
