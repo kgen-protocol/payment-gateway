@@ -102,3 +102,9 @@ type Validity struct {
 	Quantity int    `json:"quantity"`
 	Unit     string `json:"unit"`
 }
+
+type CreateTransactionRequest struct {
+	ExternalID   string `json:"external_id"`
+	ProductID    int    `json:"product_id"`
+	MobileNumber string `json:"mobile_number"`
+}

@@ -27,9 +27,11 @@ type Config struct {
 	PinelabsGetOrderURL  string
 
 	// Dt-one specific credentials
-	DtOneUsername    string
-	DtOnePassword    string
-	DtOneProductsURL string
+	DtOneUsername          string
+	DtOnePassword          string
+	DtOneProductsURL       string
+	DtOneTransactionURL    string
+	DtOneGetTransactionURL string
 
 	// Redis configuration
 	RedisHost     string
@@ -90,9 +92,11 @@ func Init() {
 		PinelabsOrderURL:     getEnvWithDefault("PINELABS_ORDER_URL", ""),
 		PinelabsGetOrderURL:  getEnvWithDefault("PINELABS_GET_ORDER_URL", ""),
 
-		DtOneUsername:    getEnvWithDefault("DT_ONE_USERNAME", ""),
-		DtOnePassword:    getEnvWithDefault("DT_ONE_PASSWORD", ""),
-		DtOneProductsURL: getEnvWithDefault("DT_ONE_PRODUCTS_URL", ""),
+		DtOneUsername:          getEnvWithDefault("DT_ONE_USERNAME", ""),
+		DtOnePassword:          getEnvWithDefault("DT_ONE_PASSWORD", ""),
+		DtOneProductsURL:       getEnvWithDefault("DT_ONE_PRODUCTS_URL", ""),
+		DtOneTransactionURL:    getEnvWithDefault("DT_ONE_TRANSACTION_URL", ""),
+		DtOneGetTransactionURL: getEnvWithDefault("DT_ONE_GET_TRANSACTION_URL", ""),
 
 		RedisHost:     host,
 		RedisPort:     port,
