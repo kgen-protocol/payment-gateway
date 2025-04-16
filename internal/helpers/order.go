@@ -3,6 +3,7 @@ package helpers
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
 	"github.com/aakritigkmit/payment-gateway/internal/model"
@@ -118,5 +119,13 @@ func MapPineOrderToTransactionModel(data *dto.PineOrderResponse) model.Transacti
 		Payments:        payments,
 		CreatedAt:       data.Data.CreatedAt,
 		UpdatedAt:       data.Data.UpdatedAt,
+	}
+}
+
+func BuildRefundPayload(order model.Order, tx model.Transaction) dto.RefundPayload {
+	return dto.RefundPayload{
+		MerchantOrderReference: fmt.Sprintf("%s-REFUND-%d", tx.MerchantOrderReference, time.Now().Unix()),
+		OrderID:                tx.PineOrderID,
+		Amount:                 order.Amount,
 	}
 }

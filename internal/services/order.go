@@ -17,10 +17,11 @@ import (
 type OrderService struct {
 	repo            *repository.OrderRepo
 	transactionRepo *repository.TransactionRepo
+	refundRepo      *repository.RefundRepo
 }
 
-func NewOrderService(repo *repository.OrderRepo, transactionRepo *repository.TransactionRepo) *OrderService {
-	return &OrderService{repo, transactionRepo}
+func NewOrderService(repo *repository.OrderRepo, transactionRepo *repository.TransactionRepo, refundRepo *repository.RefundRepo) *OrderService {
+	return &OrderService{repo, transactionRepo, refundRepo}
 }
 
 func (s *OrderService) FetchAndUpdateTransactionDetails(ctx context.Context, orderID string) {
@@ -131,4 +132,51 @@ func (s *OrderService) UpdateOrder(referenceID string, payload *dto.UpdateOrderP
 	}
 
 	return s.repo.UpdateOrder(referenceID, payload)
+}
+
+func (s *OrderService) RefundOrder(ctx context.Context, orderID string) (dto.RefundAPIResponse, error) {
+	order, err := s.repo.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return dto.RefundAPIResponse{}, err
+	}
+
+	transaction, err := s.transactionRepo.GetTransactionByPineOrderID(ctx, order.TransactionReferenceId)
+	if err != nil {
+		return dto.RefundAPIResponse{}, err
+	}
+
+	tokenResp, err := utils.FetchAccessToken(ctx)
+	if err != nil {
+		return dto.RefundAPIResponse{}, err
+	}
+
+	refundPayload := helpers.BuildRefundPayload(order, transaction)
+	fmt.Println("refunfRsp: ", refundPayload)
+	refundResp, err := utils.CallRefundAPI(ctx, tokenResp.AccessToken, orderID, refundPayload)
+	fmt.Println("refunfRsp: ", refundResp)
+	if err != nil {
+		return dto.RefundAPIResponse{}, err
+	}
+	fmt.Println("err: ", err)
+	// Save refund info
+	if err := s.refundRepo.SaveRefund(ctx, model.Refund{
+		RefundID:               order.ID,
+		ParentOrderID:          transaction.PineOrderID,
+		MerchantOrderReference: refundPayload.MerchantOrderReference,
+		RefundAmount:           refundPayload.Amount,
+		Status:                 refundResp.Data.Status,
+		CreatedAt:              time.Now(),
+	}); err != nil {
+		return dto.RefundAPIResponse{}, err
+	}
+
+	return dto.RefundAPIResponse{
+		Success: true,
+		Message: "Refund processed successfully",
+		Data: dto.RefundAPIResponseData{
+			Status:   refundResp.Data.Status,
+			RefundID: refundResp.Data.RefundID,
+		},
+	}, nil
+
 }

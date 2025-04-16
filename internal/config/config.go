@@ -25,6 +25,7 @@ type Config struct {
 	PinelabsTokenURL     string
 	PinelabsOrderURL     string
 	PinelabsGetOrderURL  string
+	PinelabsRefundURL    string
 
 	// Dt-one specific credentials
 	DtOneUsername          string
@@ -91,18 +92,18 @@ func Init() {
 		PinelabsTokenURL:     getEnvWithDefault("PINELABS_TOKEN_URL", ""),
 		PinelabsOrderURL:     getEnvWithDefault("PINELABS_ORDER_URL", ""),
 		PinelabsGetOrderURL:  getEnvWithDefault("PINELABS_GET_ORDER_URL", ""),
+		PinelabsRefundURL:    getEnvWithDefault("PINELABS_REFUND_URL", ""),
 
 		DtOneUsername:          getEnvWithDefault("DT_ONE_USERNAME", ""),
 		DtOnePassword:          getEnvWithDefault("DT_ONE_PASSWORD", ""),
 		DtOneProductsURL:       getEnvWithDefault("DT_ONE_PRODUCTS_URL", ""),
 		DtOneTransactionURL:    getEnvWithDefault("DT_ONE_TRANSACTION_URL", ""),
 		DtOneGetTransactionURL: getEnvWithDefault("DT_ONE_GET_TRANSACTION_URL", ""),
-
-		RedisHost:     host,
-		RedisPort:     port,
-		RedisPassword: getEnvWithDefault("REDIS_PASSWORD", ""),
-		RedisDB:       redisDB,
-		RedisAddr:     host + ":" + port,
+		RedisHost:              host,
+		RedisPort:              port,
+		RedisPassword:          getEnvWithDefault("REDIS_PASSWORD", ""),
+		RedisDB:                redisDB,
+		RedisAddr:              host + ":" + port,
 	}
 }
 

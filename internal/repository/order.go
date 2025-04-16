@@ -63,3 +63,14 @@ func (r *OrderRepo) UpdateOrder(referenceID string, payload *dto.UpdateOrderPayl
 
 	return nil
 }
+
+func (r *OrderRepo) GetOrderByID(ctx context.Context, orderID string) (model.Order, error) {
+	var order model.Order
+
+	err := r.collection.FindOne(ctx, bson.M{"transactionReferenceId": orderID}).Decode(&order)
+	if err != nil {
+		return model.Order{}, err
+	}
+
+	return order, nil
+}

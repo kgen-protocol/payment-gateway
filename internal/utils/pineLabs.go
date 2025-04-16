@@ -130,3 +130,46 @@ func GetOrderDetails(ctx context.Context, token string, pineOrderID string) (*dt
 
 	return &result, nil
 }
+
+func CallRefundAPI(ctx context.Context, token string, orderID string, payload dto.RefundPayload) (dto.RefundAPIResponse, error) {
+	cfg := config.GetConfig()
+
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return dto.RefundAPIResponse{}, fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/%s", cfg.PinelabsRefundURL, orderID)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return dto.RefundAPIResponse{}, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	// Generate Request-ID and Request-Timestamp
+	// requestID := uuid.New().String()
+	// requestTimestamp := time.Now().UTC().Format(time.RFC3339Nano)
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	// req.Header.Set("Request-ID", requestID)
+	// req.Header.Set("Request-Timestamp", requestTimestamp)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return dto.RefundAPIResponse{}, fmt.Errorf("refund API call failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var refundResp dto.RefundAPIResponse
+	if err := json.NewDecoder(resp.Body).Decode(&refundResp); err != nil {
+		return dto.RefundAPIResponse{}, fmt.Errorf("failed to decode refund response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return refundResp, fmt.Errorf("refund failed: %v", refundResp.Message)
+	}
+
+	return refundResp, nil
+}

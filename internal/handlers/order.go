@@ -60,3 +60,19 @@ func (h *OrderHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 
 	utils.SendSuccessResponse(w, http.StatusOK, "Order status updated successfully", nil)
 }
+
+func (h *OrderHandler) RefundOrder(w http.ResponseWriter, r *http.Request) {
+	var req dto.RefundRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	resp, err := h.service.RefundOrder(r.Context(), req.OrderID)
+	if err != nil {
+		utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	utils.SendSuccessResponse(w, http.StatusOK, "Refund processed successfully", resp)
+}
