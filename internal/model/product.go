@@ -115,6 +115,7 @@ type ProductTransaction struct {
 	CreationDate               time.Time             `bson:"creation_date" json:"creation_date"`
 	CreditPartyIdentifier      CreditPartyIdentifier `bson:"credit_party_identifier" json:"credit_party_identifier"`
 	ExternalID                 string                `bson:"external_id" json:"external_id"`
+	Pin                        Pin                   `bson:"pin" json:"pin"`
 	ID                         int64                 `bson:"id" json:"id"`
 	OperatorReference          string                `bson:"operator_reference" json:"operator_reference"`
 	Prices                     Prices                `bson:"prices" json:"prices"`
@@ -133,4 +134,22 @@ type CreditPartyIdentifier struct {
 type Validity struct {
 	Quantity int    `bson:"quantity" json:"quantity"`
 	Unit     string `bson:"unit" json:"unit"`
+}
+
+type ProductPin struct {
+	OrderID     string           `bson:"orderID"`
+	ProductPins []ProductPinItem `bson:"productPins"`
+}
+
+type ProductPinItem struct {
+	ProductID int `bson:"productId"`
+	Pin       struct {
+		Code   string `bson:"code"`
+		Serial string `bson:"serial"`
+	} `bson:"pin"`
+}
+
+type Pin struct {
+	Code   string `bson:"code" json:"code"`
+	Serial string `bson:"serial" json:"serial"`
 }

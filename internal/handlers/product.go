@@ -49,3 +49,21 @@ func (h *ProductHandler) HandleProductTransaction(w http.ResponseWriter, r *http
 
 	utils.SendSuccessResponse(w, http.StatusOK, "Transaction created and saved successfully", nil)
 }
+
+func (h *ProductHandler) CreateBulkProductTransaction(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var req dto.BulkTransactionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if err := h.service.CreateAndSaveBulkTransactions(ctx, req); err != nil {
+		log.Printf("Failed to process bulk transactions: %v", err)
+		utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	utils.SendSuccessResponse(w, http.StatusOK, "Bulk transactions processed successfully", nil)
+}
