@@ -15,9 +15,9 @@ type ProductTransactionRepo struct {
 
 func NewProductTransactionRepo(db *mongo.Database) *ProductTransactionRepo {
 	return &ProductTransactionRepo{
-		collection: db.Collection("product_transactions"),
+		collection: db.Collection("product_transactions_ak"),
 	}
-}
+} 
 
 // SaveProductTransaction inserts a new product transaction into the database
 func (r *ProductTransactionRepo) SaveProductTransaction(ctx context.Context, tx model.ProductTransaction) error {

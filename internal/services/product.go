@@ -95,84 +95,66 @@ func (s *ProductService) CreateAndSaveTransaction(ctx context.Context, req dto.C
 
 func (s *ProductService) CreateAndSaveBulkTransactions(ctx context.Context, req dto.BulkTransactionRequest) error {
 	var (
-		wg       sync.WaitGroup
-		sem      = make(chan struct{}, 3) // concurrency limit
-		pinsChan = make(chan model.ProductPinItem, 1000)
-		errChan  = make(chan error, 1000)
+		wg         sync.WaitGroup
+		sem        = make(chan struct{}, 10) // max 10 concurrent transactions
+		mu         sync.Mutex
+		totalPins  []model.ProductPinItem
+		saveErrors []error
 	)
-
-	// Collector goroutine to gather all pins and errors
-	var (
-		allPins   []model.ProductPinItem
-		allErrors []error
-	)
-	collectDone := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case pin, ok := <-pinsChan:
-				if !ok {
-					pinsChan = nil
-				} else {
-					allPins = append(allPins, pin)
-				}
-			case err, ok := <-errChan:
-				if !ok {
-					errChan = nil
-				} else {
-					allErrors = append(allErrors, err)
-				}
-			}
-			if pinsChan == nil && errChan == nil {
-				break
-			}
-		}
-		close(collectDone)
-	}()
 
 	for _, item := range req.LineItems {
 		for i := 0; i < item.Quantity; i++ {
 			wg.Add(1)
-			sem <- struct{}{} // acquire slot
+			sem <- struct{}{}
 
 			go func(item dto.LineItem) {
 				defer wg.Done()
-				defer func() { <-sem }() // release slot
+				defer func() { <-sem }()
 
 				externalID := fmt.Sprintf("TX-%s-%d", uuid.New().String()[:8], item.ProductID)
 
-				if err := utils.CreateDTOneTransaction(ctx, externalID, item.ProductID, req.MobileNumber); err != nil {
-					errChan <- fmt.Errorf("create failed for productID %d: %w", item.ProductID, err)
+				// Step 1: Create transaction
+				err := utils.CreateDTOneTransaction(ctx, externalID, item.ProductID, req.MobileNumber)
+				if err != nil {
+					log.Printf("Error creating transaction for ProductID %d: %v", item.ProductID, err)
+					mu.Lock()
+					saveErrors = append(saveErrors, err)
+					mu.Unlock()
 					return
 				}
 
-				var (
-					transactions []model.ProductTransaction
-					err          error
-				)
-
-				for attempt := 1; attempt <= 3; attempt++ {
-					time.Sleep(time.Duration(1<<uint(attempt-1)) * 500 * time.Millisecond) // 500ms, 1s, 2s
-					transactions, err = utils.FetchDTOneTransactionByExternalID(ctx, externalID)
-					if err == nil && len(transactions) > 0 {
+				// Step 2: Fetch transaction with retries
+				var txs []model.ProductTransaction
+				for attempt := 1; attempt <= 5; attempt++ {
+					time.Sleep(time.Duration(attempt) * time.Second) // increasing delay
+					txs, err = utils.FetchDTOneTransactionByExternalID(ctx, externalID)
+					if err == nil && len(txs) > 0 {
 						break
 					}
 				}
 
-				if err != nil {
-					errChan <- fmt.Errorf("fetch failed for externalID %s: %w", externalID, err)
+				if err != nil || len(txs) == 0 {
+					log.Printf("Failed to fetch transaction for externalID %s: %v", externalID, err)
+					mu.Lock()
+					saveErrors = append(saveErrors, fmt.Errorf("fetch failed for %s", externalID))
+					mu.Unlock()
 					return
 				}
 
-				for _, tx := range transactions {
+				// Step 3: Save transaction and extract PIN
+				for _, tx := range txs {
+					tx.CreatedAt = time.Now()
+					tx.UpdatedAt = time.Now()
 					if err := s.productTransactionRepo.SaveProductTransaction(ctx, tx); err != nil {
-						errChan <- fmt.Errorf("save failed for tx: %w", err)
-						return
+						log.Printf("Error saving transaction: %v", err)
+						mu.Lock()
+						saveErrors = append(saveErrors, err)
+						mu.Unlock()
+						continue
 					}
 
 					if tx.Pin.Code != "" && tx.Pin.Serial != "" {
-						log.Printf("Adding PIN: %s / %s\n", tx.Pin.Code, tx.Pin.Serial)
-						pinsChan <- model.ProductPinItem{
+						pin := model.ProductPinItem{
 							ProductID: item.ProductID,
 							Pin: struct {
 								Code   string `bson:"code"`
@@ -182,6 +164,9 @@ func (s *ProductService) CreateAndSaveBulkTransactions(ctx context.Context, req 
 								Serial: tx.Pin.Serial,
 							},
 						}
+						mu.Lock()
+						totalPins = append(totalPins, pin)
+						mu.Unlock()
 					}
 				}
 			}(item)
@@ -189,24 +174,34 @@ func (s *ProductService) CreateAndSaveBulkTransactions(ctx context.Context, req 
 	}
 
 	wg.Wait()
-	close(pinsChan)
-	close(errChan)
-	<-collectDone // wait for all pins/errors to be collected
 
-	if len(allErrors) > 0 {
-		return fmt.Errorf("failed to process bulk transactions: %w", allErrors[0])
+	// Reconciliation check
+	expectedPinCount := 0
+	for _, item := range req.LineItems {
+		expectedPinCount += item.Quantity
 	}
 
-	log.Printf("Total product pins to save: %d\n", len(allPins))
-	if len(allPins) > 0 {
+	if len(totalPins) != expectedPinCount {
+		log.Printf("WARNING: Expected %d PINs, but got %d", expectedPinCount, len(totalPins))
+	}
+
+	if len(totalPins) > 0 {
 		orderID := uuid.New().String()
 		productPinData := model.ProductPin{
 			OrderID:     orderID,
-			ProductPins: allPins,
+			ProductPins: totalPins,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
 		}
 		if err := s.productOrderRepo.SaveProductPins(ctx, productPinData); err != nil {
-			return fmt.Errorf("failed to save product pins for orderID %s: %w", orderID, err)
+			log.Printf("Failed to save final product pins: %v", err)
+			return err
 		}
+		log.Printf("Saved %d PINs successfully to order %s", len(totalPins), orderID)
+	}
+
+	if len(saveErrors) > 0 {
+		return fmt.Errorf("completed with %d errors, see logs for details", len(saveErrors))
 	}
 
 	return nil

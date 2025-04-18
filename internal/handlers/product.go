@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -51,7 +52,7 @@ func (h *ProductHandler) HandleProductTransaction(w http.ResponseWriter, r *http
 }
 
 func (h *ProductHandler) CreateBulkProductTransaction(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	// ctx := r.Context()
 
 	var req dto.BulkTransactionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -59,11 +60,13 @@ func (h *ProductHandler) CreateBulkProductTransaction(w http.ResponseWriter, r *
 		return
 	}
 
-	if err := h.service.CreateAndSaveBulkTransactions(ctx, req); err != nil {
-		log.Printf("Failed to process bulk transactions: %v", err)
-		utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	go func(request dto.BulkTransactionRequest) {
+		// Create a detached context so work isn't canceled if client disconnects
+		bgCtx := context.Background()
+		if err := h.service.CreateAndSaveBulkTransactions(bgCtx, request); err != nil {
+			log.Printf("Async bulk transaction failed: %v", err)
+		}
+	}(req)
 
 	utils.SendSuccessResponse(w, http.StatusOK, "Bulk transactions processed successfully", nil)
 }

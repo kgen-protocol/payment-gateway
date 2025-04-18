@@ -1,9 +1,9 @@
 package dto
 
 type LineItem struct {
-	ProductID int `json:"productId"`
-	Quantity  int `json:"quantity"`
-	Amount    int `json:"amount"`
+	ProductID int     `json:"productId"`
+	Quantity  int     `json:"quantity"`
+	Amount    float64 `json:"amount"`
 }
 
 type BulkTransactionRequest struct {
