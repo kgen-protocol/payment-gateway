@@ -108,6 +108,7 @@ type Benefit struct {
 }
 
 // ProductTransaction Model
+
 type ProductTransaction struct {
 	Benefits                   []Benefit             `bson:"benefits" json:"benefits"`
 	ConfirmationDate           time.Time             `bson:"confirmation_date" json:"confirmation_date"`
@@ -115,9 +116,9 @@ type ProductTransaction struct {
 	CreationDate               time.Time             `bson:"creation_date" json:"creation_date"`
 	CreditPartyIdentifier      CreditPartyIdentifier `bson:"credit_party_identifier" json:"credit_party_identifier"`
 	ExternalID                 string                `bson:"external_id" json:"external_id"`
-	Pin                        Pin                   `bson:"pin" json:"pin"`
 	ID                         int64                 `bson:"id" json:"id"`
 	OperatorReference          string                `bson:"operator_reference" json:"operator_reference"`
+	Pin                        Pin                   `bson:"pin" json:"pin"`
 	Prices                     Prices                `bson:"prices" json:"prices"`
 	Product                    Product               `bson:"product" json:"product"`
 	Promotions                 interface{}           `bson:"promotions" json:"promotions"`
@@ -125,7 +126,25 @@ type ProductTransaction struct {
 	Status                     Status                `bson:"status" json:"status"`
 	CreatedAt                  time.Time             `bson:"created_at" json:"created_at"`
 	UpdatedAt                  time.Time             `bson:"updated_at" json:"updated_at"`
+	UpdationTime               string                `bson:"updation_time" json:"updation_time"`
 	DeletedAt                  time.Time             `bson:"deleted_at" json:"deleted_at"`
+}
+
+type ProductPinItem struct {
+	ExternalID string `bson:"external_id"`
+	ProductID  int    `bson:"productId"`
+	Pin        struct {
+		Code   string `bson:"code"`
+		Serial string `bson:"serial"`
+	} `bson:"pin"`
+}
+
+type ProductPin struct {
+	OrderID     string           `bson:"orderID"`
+	ProductPins []ProductPinItem `bson:"productPins"`
+	CreatedAt   time.Time        `bson:"created_at" json:"created_at"`
+	UpdatedAt   time.Time        `bson:"updated_at" json:"updated_at"`
+	DeletedAt   time.Time        `bson:"deleted_at" json:"deleted_at"`
 }
 
 // CreditPartyIdentifier Model
@@ -139,39 +158,7 @@ type Validity struct {
 	Unit     string `bson:"unit" json:"unit"`
 }
 
-type ProductPin struct {
-	OrderID     string           `bson:"orderID"`
-	ProductPins []ProductPinItem `bson:"productPins"`
-	CreatedAt   time.Time        `bson:"created_at" json:"created_at"`
-	UpdatedAt   time.Time        `bson:"updated_at" json:"updated_at"`
-	DeletedAt   time.Time        `bson:"deleted_at" json:"deleted_at"`
-}
-
-type ProductPinItem struct {
-	ProductID int `bson:"productId"`
-	Pin       struct {
-		Code   string `bson:"code"`
-		Serial string `bson:"serial"`
-	} `bson:"pin"`
-}
-
 type Pin struct {
 	Code   string `bson:"code" json:"code"`
 	Serial string `bson:"serial" json:"serial"`
-}
-type ProductOrder struct {
-	OrderID   string             `bson:"orderID"`
-	Mobile    string             `bson:"mobile"`
-	LineItems []ProductOrderItem `bson:"lineItems"`
-	CreatedAt time.Time          `bson:"createdAt"`
-	UpdatedAt time.Time          `bson:"updatedAt"`
-}
-
-type ProductOrderItem struct {
-	ProductID   int              `bson:"productId"`
-	Quantity    int              `bson:"quantity"`
-	Amount      float64          `bson:"amount"`
-	ProductPins []ProductPinItem `bson:"productPins"`
-	ExternalID  string           `bson:"externalId"`
-	Status      string           `bson:"status"` // e.g. pending, completed, failed
 }
