@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -48,4 +49,24 @@ func (h *ProductHandler) HandleProductTransaction(w http.ResponseWriter, r *http
 	}
 
 	utils.SendSuccessResponse(w, http.StatusOK, "Transaction created and saved successfully", nil)
+}
+func (h *ProductHandler) CreateBulkProductTransaction(w http.ResponseWriter, r *http.Request) {
+	var req dto.BulkTransactionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Respond immediately to the user
+	utils.SendSuccessResponse(w, http.StatusOK, "Your order is being processed in the background", nil)
+
+	// Run background job independently
+	go func() {
+		bgCtx := context.Background()
+		if err := h.service.CreateAndSaveBulkTransactions(bgCtx, req); err != nil {
+			log.Printf("Background bulk transaction failed: %v", err)
+		} else {
+			log.Println("Background bulk transaction completed successfully")
+		}
+	}()
 }

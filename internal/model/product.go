@@ -108,6 +108,7 @@ type Benefit struct {
 }
 
 // ProductTransaction Model
+
 type ProductTransaction struct {
 	Benefits                   []Benefit             `bson:"benefits" json:"benefits"`
 	ConfirmationDate           time.Time             `bson:"confirmation_date" json:"confirmation_date"`
@@ -117,11 +118,33 @@ type ProductTransaction struct {
 	ExternalID                 string                `bson:"external_id" json:"external_id"`
 	ID                         int64                 `bson:"id" json:"id"`
 	OperatorReference          string                `bson:"operator_reference" json:"operator_reference"`
+	Pin                        Pin                   `bson:"pin" json:"pin"`
 	Prices                     Prices                `bson:"prices" json:"prices"`
 	Product                    Product               `bson:"product" json:"product"`
 	Promotions                 interface{}           `bson:"promotions" json:"promotions"`
 	Rates                      Rates                 `bson:"rates" json:"rates"`
 	Status                     Status                `bson:"status" json:"status"`
+	CreatedAt                  time.Time             `bson:"created_at" json:"created_at"`
+	UpdatedAt                  time.Time             `bson:"updated_at" json:"updated_at"`
+	UpdationTime               string                `bson:"updation_time" json:"updation_time"`
+	DeletedAt                  time.Time             `bson:"deleted_at" json:"deleted_at"`
+}
+
+type ProductPinItem struct {
+	ExternalID string `bson:"external_id"`
+	ProductID  int    `bson:"productId"`
+	Pin        struct {
+		Code   string `bson:"code"`
+		Serial string `bson:"serial"`
+	} `bson:"pin"`
+}
+
+type ProductPin struct {
+	OrderID     string           `bson:"orderID"`
+	ProductPins []ProductPinItem `bson:"productPins"`
+	CreatedAt   time.Time        `bson:"created_at" json:"created_at"`
+	UpdatedAt   time.Time        `bson:"updated_at" json:"updated_at"`
+	DeletedAt   time.Time        `bson:"deleted_at" json:"deleted_at"`
 }
 
 // CreditPartyIdentifier Model
@@ -133,4 +156,9 @@ type CreditPartyIdentifier struct {
 type Validity struct {
 	Quantity int    `bson:"quantity" json:"quantity"`
 	Unit     string `bson:"unit" json:"unit"`
+}
+
+type Pin struct {
+	Code   string `bson:"code" json:"code"`
+	Serial string `bson:"serial" json:"serial"`
 }
