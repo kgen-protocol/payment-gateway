@@ -3,10 +3,10 @@ package helpers
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
 	"github.com/aakritigkmit/payment-gateway/internal/model"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // StructToMap converts a struct to a map[string]interface{}
@@ -101,7 +101,7 @@ func MapPineOrderToTransactionModel(data *dto.PineOrderResponse) model.Transacti
 		MerchantID:            data.Data.MerchantID,
 		CallbackURL:           data.Data.CallbackURL,
 		FailureCallbackURL:    data.Data.FailureCallbackURL,
-		PurchaseDetails: model.PurchaseDetails{
+		PurchaseDetails: model.PurchaseDetail{
 			Customer: model.Customer{
 				EmailID:         data.Data.PurchaseDetails.Customer.EmailID,
 				FirstName:       data.Data.PurchaseDetails.Customer.FirstName,
@@ -111,7 +111,7 @@ func MapPineOrderToTransactionModel(data *dto.PineOrderResponse) model.Transacti
 				BillingAddress:  model.Address(data.Data.PurchaseDetails.Customer.BillingAddress),
 				ShippingAddress: model.Address(data.Data.PurchaseDetails.Customer.ShippingAddress),
 			},
-			MerchantMetadata: data.Data.PurchaseDetails.MerchantMetadata,
+			MerchantMetadata: model.MerchantMetadata(data.Data.PurchaseDetails.MerchantMetadata),
 		},
 		PineOrderID:     data.Data.OrderID,
 		Status:          data.Data.Status,
@@ -122,10 +122,74 @@ func MapPineOrderToTransactionModel(data *dto.PineOrderResponse) model.Transacti
 	}
 }
 
-func BuildRefundPayload(order model.Order, tx model.Transaction) dto.RefundPayload {
-	return dto.RefundPayload{
-		MerchantOrderReference: fmt.Sprintf("%s-REFUND-%d", tx.MerchantOrderReference, time.Now().Unix()),
-		OrderID:                tx.PineOrderID,
-		Amount:                 order.Amount,
+// utils/refund.go
+
+// func ConvertRefundDTOToModelWithTxID(resp dto.RefundResponse, transactionID primitive.ObjectID) model.Refund {
+// 	return model.Refund{
+// 		TransactionID:          transactionID,
+// 		MerchantOrderReference: resp.Data.MerchantOrderReference,
+// 		OrderID:                resp.Data.OrderID,
+// 		Type:                   resp.Data.Type,
+// 		Status:                 resp.Data.Status,
+// 		OrderAmount:            resp.Data.OrderAmount,
+// 		Payments:               resp.Data.Payments,
+// 		PurchaseDetails:        resp.Data.PurchaseDetails,
+// 		CreatedAt:              resp.Data.CreatedAt,
+// 		UpdatedAt:              resp.Data.UpdatedAt,
+// 	}
+// }
+
+func MapRefundResponseToRefundModel(data *dto.RefundResponse, transactionID primitive.ObjectID) model.Refund {
+	if len(data.Data.Refunds) == 0 {
+		return model.Refund{} // or handle error if required
+	}
+
+	refundData := data.Data.Refunds[0]
+
+	// Map payments
+	payments := make([]model.Payment, 0)
+	for _, p := range refundData.Payments {
+		payments = append(payments, model.Payment{
+			ID:                       p.ID,
+			MerchantPaymentReference: p.MerchantPaymentReference,
+			Status:                   p.Status,
+			PaymentMethod:            p.PaymentMethod,
+			PaymentAmount: model.OrderAmount{
+				Value:    p.PaymentAmount.Value,
+				Currency: p.PaymentAmount.Currency,
+			},
+			AcquirerData: model.AcquirerData{
+				ApprovalCode:      p.AcquirerData.ApprovalCode,
+				AcquirerReference: p.AcquirerData.AcquirerReference,
+				RRN:               p.AcquirerData.RRN,
+				IsAggregator:      p.AcquirerData.IsAggregator,
+				AcquirerName:      p.AcquirerData.AcquirerName,
+			},
+			CreatedAt: p.CreatedAt,
+			UpdatedAt: p.UpdatedAt,
+		})
+	}
+
+	return model.Refund{
+		TransactionID:          transactionID,
+		MerchantOrderReference: refundData.MerchantOrderReference,
+		OrderID:                refundData.OrderID,
+		Type:                   refundData.Type,
+		Status:                 refundData.Status,
+		OrderAmount: model.OrderAmount{
+			Value:    refundData.OrderAmount.Value,
+			Currency: refundData.OrderAmount.Currency,
+		},
+		Payments: payments,
+		PurchaseDetails: model.PurchaseDetail{
+			Customer: model.Customer{
+				CountryCode:     refundData.PurchaseDetails.Customer.CountryCode,
+				BillingAddress:  model.Address(refundData.PurchaseDetails.Customer.BillingAddress),
+				ShippingAddress: model.Address(refundData.PurchaseDetails.Customer.ShippingAddress),
+			},
+			MerchantMetadata: model.MerchantMetadata(refundData.PurchaseDetails.MerchantMetadata),
+		},
+		CreatedAt: refundData.CreatedAt,
+		UpdatedAt: refundData.UpdatedAt,
 	}
 }

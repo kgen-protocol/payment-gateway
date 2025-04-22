@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
+	"github.com/google/uuid"
 
 	"github.com/aakritigkmit/payment-gateway/internal/helpers"
 	"github.com/aakritigkmit/payment-gateway/internal/model"
@@ -17,11 +18,10 @@ import (
 type OrderService struct {
 	repo            *repository.OrderRepo
 	transactionRepo *repository.TransactionRepo
-	refundRepo      *repository.RefundRepo
 }
 
-func NewOrderService(repo *repository.OrderRepo, transactionRepo *repository.TransactionRepo, refundRepo *repository.RefundRepo) *OrderService {
-	return &OrderService{repo, transactionRepo, refundRepo}
+func NewOrderService(repo *repository.OrderRepo, transactionRepo *repository.TransactionRepo) *OrderService {
+	return &OrderService{repo, transactionRepo}
 }
 
 func (s *OrderService) FetchAndUpdateTransactionDetails(ctx context.Context, orderID string) {
@@ -83,8 +83,8 @@ func (s *OrderService) PlaceOrder(ctx context.Context, req dto.PlaceOrderRequest
 		Notes:                 req.Notes,
 		CallbackURL:           req.CallbackURL,
 		FailureCallbackURL:    req.FailureCallbackURL,
-		PurchaseDetails: model.PurchaseDetails{
-			MerchantMetadata: req.PurchaseDetails.MerchantMetadata,
+		PurchaseDetails: model.PurchaseDetail{
+			MerchantMetadata: model.MerchantMetadata(req.PurchaseDetails.MerchantMetadata),
 			Customer: model.Customer{
 				EmailID:         req.PurchaseDetails.Customer.EmailID,
 				FirstName:       req.PurchaseDetails.Customer.FirstName,
@@ -134,49 +134,73 @@ func (s *OrderService) UpdateOrder(referenceID string, payload *dto.UpdateOrderP
 	return s.repo.UpdateOrder(referenceID, payload)
 }
 
-func (s *OrderService) RefundOrder(ctx context.Context, orderID string) (dto.RefundAPIResponse, error) {
-	order, err := s.repo.GetOrderByID(ctx, orderID)
+func (s *OrderService) ProcessRefund(ctx context.Context, req dto.RefundRequest) (dto.RefundResponse, error) {
+	// Fetch the order from the database
+	order, err := s.repo.GetOrderByTransactionReferenceId(ctx, req.OrderID)
 	if err != nil {
-		return dto.RefundAPIResponse{}, err
+		return dto.RefundResponse{}, fmt.Errorf("order not found: %w", err)
 	}
 
-	transaction, err := s.transactionRepo.GetTransactionByPineOrderID(ctx, order.TransactionReferenceId)
-	if err != nil {
-		return dto.RefundAPIResponse{}, err
+	// Validate refund amount
+	if float32(req.OrderAmount) > order.Amount {
+		return dto.RefundResponse{}, fmt.Errorf("refund amount exceeds order amount")
 	}
 
+	// Fetch access token
 	tokenResp, err := utils.FetchAccessToken(ctx)
 	if err != nil {
-		return dto.RefundAPIResponse{}, err
+		return dto.RefundResponse{}, fmt.Errorf("failed to fetch access token: %w", err)
 	}
+	MerchantOrderReferenceID := fmt.Sprintf("TX-%s", uuid.New().String()[:20])
 
-	refundPayload := helpers.BuildRefundPayload(order, transaction)
-	fmt.Println("refunfRsp: ", refundPayload)
-	refundResp, err := utils.CallRefundAPI(ctx, tokenResp.AccessToken, orderID, refundPayload)
-	fmt.Println("refunfRsp: ", refundResp)
-	if err != nil {
-		return dto.RefundAPIResponse{}, err
-	}
-	fmt.Println("err: ", err)
-	// Save refund info
-	if err := s.refundRepo.SaveRefund(ctx, model.Refund{
-		RefundID:               order.ID,
-		ParentOrderID:          transaction.PineOrderID,
-		MerchantOrderReference: refundPayload.MerchantOrderReference,
-		RefundAmount:           refundPayload.Amount,
-		Status:                 refundResp.Data.Status,
-		CreatedAt:              time.Now(),
-	}); err != nil {
-		return dto.RefundAPIResponse{}, err
-	}
+	currency := "INR"
+	key1 := "DD"
+	key2 := "XOF"
 
-	return dto.RefundAPIResponse{
-		Success: true,
-		Message: "Refund processed successfully",
-		Data: dto.RefundAPIResponseData{
-			Status:   refundResp.Data.Status,
-			RefundID: refundResp.Data.RefundID,
+	// Build refund payload
+	refundPayload := map[string]interface{}{
+		"merchant_order_reference": MerchantOrderReferenceID,
+		"order_amount": map[string]interface{}{
+			"value":    req.OrderAmount,
+			"currency": currency,
 		},
-	}, nil
+		"merchant_metadata": map[string]interface{}{
+			"key1":  key1,
+			"key_2": key2,
+		},
+	}
 
+	// Convert payload to JSON
+	jsonPayload, err := json.Marshal(refundPayload)
+	if err != nil {
+		return dto.RefundResponse{}, fmt.Errorf("failed to marshal refund payload: %w", err)
+	}
+
+	// Create refund request
+	refundResp, err := utils.CreateRefundRequest(ctx, tokenResp.AccessToken, req.OrderID, jsonPayload)
+	if err != nil {
+		return dto.RefundResponse{}, fmt.Errorf("failed to process refund with Pine Labs: %w", err)
+	}
+
+	// Update order amount and status
+	order.Amount -= float32(req.OrderAmount)
+	if order.Amount == 0 {
+		order.Status = "Refunded"
+	} else {
+		order.Status = "Partially Refunded"
+	}
+	order.UpdatedAt = time.Now()
+
+	if err := s.repo.UpdateOrderRefund(ctx, order); err != nil {
+		return dto.RefundResponse{}, fmt.Errorf("failed to update order after refund: %w", err)
+	}
+
+	refundModel := helpers.MapRefundResponseToRefundModel(refundResp, order.ID)
+
+	// Save refund
+	if err := s.repo.SaveRefund(ctx, refundModel); err != nil {
+		return dto.RefundResponse{}, fmt.Errorf("failed to save refund: %w", err)
+	}
+
+	return *refundResp, nil
 }

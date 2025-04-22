@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
@@ -63,16 +64,17 @@ func (h *OrderHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 
 func (h *OrderHandler) RefundOrder(w http.ResponseWriter, r *http.Request) {
 	var req dto.RefundRequest
+	fmt.Println("req", req)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	resp, err := h.service.RefundOrder(r.Context(), req.OrderID)
+	refundResp, err := h.service.ProcessRefund(r.Context(), req)
 	if err != nil {
 		utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SendSuccessResponse(w, http.StatusOK, "Refund processed successfully", resp)
+	utils.SendSuccessResponse(w, http.StatusOK, "Refund processed successfully", refundResp)
 }

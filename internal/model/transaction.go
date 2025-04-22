@@ -11,9 +11,9 @@ type OrderAmount struct {
 	Currency string  `json:"currency"`
 }
 
-type PurchaseDetails struct {
-	Customer         Customer          `json:"customer"`
-	MerchantMetadata map[string]string `json:"merchant_metadata"`
+type PurchaseDetail struct {
+	Customer         Customer         `json:"customer"`
+	MerchantMetadata MerchantMetadata `json:"merchant_metadata"`
 }
 
 type Customer struct {
@@ -40,11 +40,12 @@ type Transaction struct {
 	Notes                  string             `json:"notes"`
 	CallbackURL            string             `json:"callback_url"`
 	FailureCallbackURL     string             `json:"failure_callback_url"`
-	PurchaseDetails        PurchaseDetails    `json:"purchase_details"`
+	PurchaseDetails        PurchaseDetail     `json:"purchase_details"`
 	PineOrderID            string             `json:"order_id" bson:"order_id"`
 	Token                  string             `json:"token"`
 	RedirectURL            string             `json:"redirect_url"`
 	Status                 string             `json:"status"` // e.g., "PROCESSED"
+	Refunds                []Refund           `json:"refunds" bson:"refunds"`
 	IntegrationMode        string             `json:"integration_mode" bson:"integration_mode"`
 	Payments               []Payment          `json:"payments" bson:"payments"`
 	CreatedAt              time.Time          `json:"created_at" bson:"created_at"`
@@ -68,4 +69,23 @@ type Payment struct {
 	AcquirerData             AcquirerData `json:"acquirer_data" bson:"acquirer_data"`
 	CreatedAt                time.Time    `json:"created_at" bson:"created_at"`
 	UpdatedAt                time.Time    `json:"updated_at" bson:"updated_at"`
+}
+
+type Refund struct {
+	ID                     primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	TransactionID          primitive.ObjectID `bson:"transaction_id" json:"transaction_id"`
+	MerchantOrderReference string             `json:"merchant_order_reference"`
+	OrderID                string             `json:"order_id"`
+	Type                   string             `json:"type"`
+	Status                 string             `json:"status"`
+	OrderAmount            OrderAmount        `json:"order_amount"`
+	Payments               []Payment          `json:"payments"`
+	PurchaseDetails        PurchaseDetail     `json:"purchase_details"`
+	CreatedAt              string             `json:"created_at"`
+	UpdatedAt              string             `json:"updated_at"`
+}
+
+type MerchantMetadata struct {
+	Key1 string `json:"key1"`
+	Key2 string `json:"key_2"`
 }

@@ -12,8 +12,7 @@ import (
 func SetupOrderRoutes(r chi.Router, db *mongo.Database) {
 	orderRepo := repository.NewOrderRepo(db)
 	transactionRepo := repository.NewTransactionRepo(db)
-	refundRepo := repository.NewRefundRepository(db)
-	orderService := services.NewOrderService(orderRepo, transactionRepo, refundRepo)
+	orderService := services.NewOrderService(orderRepo, transactionRepo)
 	orderHandler := handlers.NewOrderHandler(orderService)
 
 	// r.Use(middlewares.AuthMiddleware) // Apply auth middleware
