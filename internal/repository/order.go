@@ -104,7 +104,7 @@ func (r *OrderRepo) UpdateOrderRefund(ctx context.Context, order model.Order) er
 	return err
 }
 
-func (r *OrderRepo) SaveRefund(ctx context.Context, refund model.Refund) error {
+func (r *OrderRepo) SaveRefund(ctx context.Context, refund model.Transaction) error {
 
 	_, err := r.collectionRefund.InsertOne(ctx, refund)
 	if err != nil {

@@ -142,6 +142,7 @@ type PineOrderData struct {
 	AllowedPaymentMethods   []string       `json:"allowed_payment_methods"`
 	PurchaseDetails         PurchaseDetail `json:"purchase_details"`
 	Payments                []Payment      `json:"payments"`
+	Refunds                 []Refund       `json:"refunds"`
 	CreatedAt               time.Time      `json:"created_at"`
 	UpdatedAt               time.Time      `json:"updated_at"`
 	IntegrationMode         string         `json:"integration_mode"`

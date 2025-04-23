@@ -96,7 +96,7 @@ func (s *ProductService) CreateAndSaveTransaction(ctx context.Context, req dto.C
 func (s *ProductService) CreateAndSaveBulkTransactions(ctx context.Context, req dto.BulkTransactionRequest) error {
 	startTime := time.Now()
 	const (
-		numWorkers = 10
+		numWorkers = 30
 		maxRetries = 5
 		baseDelay  = 2 * time.Second
 	)

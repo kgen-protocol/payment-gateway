@@ -134,22 +134,22 @@ func (s *OrderService) UpdateOrder(referenceID string, payload *dto.UpdateOrderP
 	return s.repo.UpdateOrder(referenceID, payload)
 }
 
-func (s *OrderService) ProcessRefund(ctx context.Context, req dto.RefundRequest) (dto.RefundResponse, error) {
+func (s *OrderService) ProcessRefund(ctx context.Context, req dto.RefundRequest) (dto.PineOrderResponse, error) {
 	// Fetch the order from the database
 	order, err := s.repo.GetOrderByTransactionReferenceId(ctx, req.OrderID)
 	if err != nil {
-		return dto.RefundResponse{}, fmt.Errorf("order not found: %w", err)
+		return dto.PineOrderResponse{}, fmt.Errorf("order not found: %w", err)
 	}
 
 	// Validate refund amount
 	if float32(req.OrderAmount) > order.Amount {
-		return dto.RefundResponse{}, fmt.Errorf("refund amount exceeds order amount")
+		return dto.PineOrderResponse{}, fmt.Errorf("refund amount exceeds order amount")
 	}
 
 	// Fetch access token
 	tokenResp, err := utils.FetchAccessToken(ctx)
 	if err != nil {
-		return dto.RefundResponse{}, fmt.Errorf("failed to fetch access token: %w", err)
+		return dto.PineOrderResponse{}, fmt.Errorf("failed to fetch access token: %w", err)
 	}
 	MerchantOrderReferenceID := fmt.Sprintf("TX-%s", uuid.New().String()[:20])
 
@@ -173,13 +173,19 @@ func (s *OrderService) ProcessRefund(ctx context.Context, req dto.RefundRequest)
 	// Convert payload to JSON
 	jsonPayload, err := json.Marshal(refundPayload)
 	if err != nil {
-		return dto.RefundResponse{}, fmt.Errorf("failed to marshal refund payload: %w", err)
+		return dto.PineOrderResponse{}, fmt.Errorf("failed to marshal refund payload: %w", err)
 	}
 
 	// Create refund request
-	refundResp, err := utils.CreateRefundRequest(ctx, tokenResp.AccessToken, req.OrderID, jsonPayload)
+	_, err = utils.CreateRefundRequest(ctx, tokenResp.AccessToken, req.OrderID, jsonPayload)
 	if err != nil {
-		return dto.RefundResponse{}, fmt.Errorf("failed to process refund with Pine Labs: %w", err)
+		return dto.PineOrderResponse{}, fmt.Errorf("failed to process refund with Pine Labs: %w", err)
+	}
+
+	// Fetch order details again to get refunds
+	orderDetailsResp, err := utils.GetOrderDetails(ctx, tokenResp.AccessToken, req.OrderID)
+	if err != nil {
+		return dto.PineOrderResponse{}, fmt.Errorf("failed to fetch order details after refund: %w", err)
 	}
 
 	// Update order amount and status
@@ -192,15 +198,15 @@ func (s *OrderService) ProcessRefund(ctx context.Context, req dto.RefundRequest)
 	order.UpdatedAt = time.Now()
 
 	if err := s.repo.UpdateOrderRefund(ctx, order); err != nil {
-		return dto.RefundResponse{}, fmt.Errorf("failed to update order after refund: %w", err)
+		return dto.PineOrderResponse{}, fmt.Errorf("failed to update order after refund: %w", err)
 	}
 
-	refundModel := helpers.MapRefundResponseToRefundModel(refundResp, order.ID)
+	refundModel := helpers.MapRefundsToTransactionModel(orderDetailsResp, order.ID)
 
 	// Save refund
 	if err := s.repo.SaveRefund(ctx, refundModel); err != nil {
-		return dto.RefundResponse{}, fmt.Errorf("failed to save refund: %w", err)
+		return dto.PineOrderResponse{}, fmt.Errorf("failed to save refund: %w", err)
 	}
 
-	return *refundResp, nil
+	return *orderDetailsResp, nil
 }
