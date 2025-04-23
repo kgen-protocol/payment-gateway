@@ -113,3 +113,13 @@ func (r *OrderRepo) SaveRefund(ctx context.Context, refund model.Transaction) er
 
 	return nil
 }
+
+func (r *OrderRepo) SaveRefundResponse(ctx context.Context, refund *dto.RefundOrderResponse) error {
+
+	_, err := r.collectionRefund.InsertOne(ctx, refund)
+	if err != nil {
+		return fmt.Errorf("failed to insert refund: %w", err)
+	}
+
+	return nil
+}

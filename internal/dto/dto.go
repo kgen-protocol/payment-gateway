@@ -227,3 +227,28 @@ type Refund struct {
 	CreatedAt              string         `json:"created_at"`
 	UpdatedAt              string         `json:"updated_at"`
 }
+
+type RefundOrderResponse struct {
+	Data RefundOrderData `json:"data"`
+}
+
+type RefundOrderData struct {
+	OrderID                 string          `json:"order_id"`
+	ParentOrderID           string          `json:"parent_order_id"`
+	MerchantOrderReference  string          `json:"merchant_order_reference"`
+	Type                    string          `json:"type"`
+	Status                  string          `json:"status"`
+	MerchantID              string          `json:"merchant_id"`
+	OrderAmount             Amount          `json:"order_amount"`
+	PurchaseDetails         PurchaseDetails `json:"purchase_details"`
+	Payments                []Payment       `json:"payments"`
+	CreatedAt               string          `json:"created_at"`
+	UpdatedAt               string          `json:"updated_at"`
+	IntegrationMode         string          `json:"integration_mode"`
+	PaymentRetriesRemaining int             `json:"payment_retries_remaining"`
+}
+
+type PurchaseDetails struct {
+	Customer         Customer          `json:"customer"`
+	MerchantMetadata map[string]string `json:"merchant_metadata"`
+}

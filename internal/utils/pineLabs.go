@@ -132,7 +132,7 @@ func GetOrderDetails(ctx context.Context, token string, pineOrderID string) (*dt
 	return &result, nil
 }
 
-func CreateRefundRequest(ctx context.Context, accessToken, orderID string, payload []byte) (*dto.RefundResponse, error) {
+func CreateRefundRequest(ctx context.Context, accessToken, orderID string, payload []byte) (*dto.RefundOrderResponse, error) {
 	cfg := config.GetConfig()
 	url := fmt.Sprintf("%s/%s", cfg.PinelabsRefundURL, orderID)
 

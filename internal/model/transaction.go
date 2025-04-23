@@ -89,3 +89,28 @@ type MerchantMetadata struct {
 	Key1 string `json:"key1"`
 	Key2 string `json:"key_2"`
 }
+
+type RefundOrderResponse struct {
+	Data RefundOrderData `bson:"data" json:"data"`
+}
+
+type RefundOrderData struct {
+	OrderID                 string          `bson:"order_id" json:"order_id"`
+	ParentOrderID           string          `bson:"parent_order_id" json:"parent_order_id"`
+	MerchantOrderReference  string          `bson:"merchant_order_reference" json:"merchant_order_reference"`
+	Type                    string          `bson:"type" json:"type"`
+	Status                  string          `bson:"status" json:"status"`
+	MerchantID              string          `bson:"merchant_id" json:"merchant_id"`
+	OrderAmount             Amount          `bson:"order_amount" json:"order_amount"`
+	PurchaseDetails         PurchaseDetails `bson:"purchase_details" json:"purchase_details"`
+	Payments                []Payment       `bson:"payments" json:"payments"`
+	CreatedAt               string          `bson:"created_at" json:"created_at"`
+	UpdatedAt               string          `bson:"updated_at" json:"updated_at"`
+	IntegrationMode         string          `bson:"integration_mode" json:"integration_mode"`
+	PaymentRetriesRemaining int             `bson:"payment_retries_remaining" json:"payment_retries_remaining"`
+}
+
+type PurchaseDetails struct {
+	Customer         Customer          `bson:"customer" json:"customer"`
+	MerchantMetadata map[string]string `bson:"merchant_metadata" json:"merchant_metadata"`
+}

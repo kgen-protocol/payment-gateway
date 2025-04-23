@@ -177,9 +177,13 @@ func (s *OrderService) ProcessRefund(ctx context.Context, req dto.RefundRequest)
 	}
 
 	// Create refund request
-	_, err = utils.CreateRefundRequest(ctx, tokenResp.AccessToken, req.OrderID, jsonPayload)
+	refundResponse, err := utils.CreateRefundRequest(ctx, tokenResp.AccessToken, req.OrderID, jsonPayload)
 	if err != nil {
 		return dto.PineOrderResponse{}, fmt.Errorf("failed to process refund with Pine Labs: %w", err)
+	}
+
+	if err := s.repo.SaveRefundResponse(ctx, refundResponse); err != nil {
+		return dto.PineOrderResponse{}, fmt.Errorf("failed to save refund: %w", err)
 	}
 
 	// Fetch order details again to get refunds
