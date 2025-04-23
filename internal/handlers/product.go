@@ -50,6 +50,28 @@ func (h *ProductHandler) HandleProductTransaction(w http.ResponseWriter, r *http
 
 	utils.SendSuccessResponse(w, http.StatusOK, "Transaction created and saved successfully", nil)
 }
+
+// func (h *ProductHandler) CreateBulkProductTransaction(w http.ResponseWriter, r *http.Request) {
+// 	var req dto.BulkTransactionRequest
+// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+// 		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+// 		return
+// 	}
+
+// 	// Respond immediately to the user
+// 	utils.SendSuccessResponse(w, http.StatusOK, "Your order is being processed in the background", nil)
+
+// 	// Run background job independently
+// 	go func() {
+// 		bgCtx := context.Background()
+// 		if err := h.service.CreateAndSaveBulkTransactions(bgCtx, req); err != nil {
+// 			log.Printf("Background bulk transaction failed: %v", err)
+// 		} else {
+// 			log.Println("Background bulk transaction completed successfully")
+// 		}
+// 	}()
+// }
+
 func (h *ProductHandler) CreateBulkProductTransaction(w http.ResponseWriter, r *http.Request) {
 	var req dto.BulkTransactionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -57,16 +79,23 @@ func (h *ProductHandler) CreateBulkProductTransaction(w http.ResponseWriter, r *
 		return
 	}
 
-	// Respond immediately to the user
-	utils.SendSuccessResponse(w, http.StatusOK, "Your order is being processed in the background", nil)
+	// Generate a new orderId and save it to DB
+	orderId, err := h.service.InitBulkProductTransaction(r.Context(), req)
+	if err != nil {
+		utils.SendErrorResponse(w, http.StatusInternalServerError, "Failed to create transaction entry")
+		return
+	}
 
-	// Run background job independently
+	// Respond immediately
+	utils.SendSuccessResponse(w, http.StatusOK, "Your order has been placed", map[string]string{"orderId": orderId})
+
+	// Start async background processing
 	go func() {
 		bgCtx := context.Background()
-		if err := h.service.CreateAndSaveBulkTransactions(bgCtx, req); err != nil {
-			log.Printf("Background bulk transaction failed: %v", err)
+		if err := h.service.ProcessBulkProductTransactionAsync(bgCtx, req, orderId); err != nil {
+			log.Printf("Async processing failed for OrderID %s: %v", orderId, err)
 		} else {
-			log.Println("Background bulk transaction completed successfully")
+			log.Printf("Bulk transaction completed successfully for OrderID %s", orderId)
 		}
 	}()
 }

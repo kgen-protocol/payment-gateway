@@ -16,7 +16,7 @@ type ProductTransactionRepo struct {
 
 func NewProductTransactionRepo(db *mongo.Database) *ProductTransactionRepo {
 	return &ProductTransactionRepo{
-		collection: db.Collection("product_transactions"),
+		collection: db.Collection("product_transactions_ab"),
 	}
 }
 
