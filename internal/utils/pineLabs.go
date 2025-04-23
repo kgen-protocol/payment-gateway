@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -129,4 +130,35 @@ func GetOrderDetails(ctx context.Context, token string, pineOrderID string) (*dt
 	}
 
 	return &result, nil
+}
+
+func CreateRefundRequest(ctx context.Context, accessToken, orderID string, payload []byte) (*dto.RefundOrderResponse, error) {
+	cfg := config.GetConfig()
+	url := fmt.Sprintf("%s/%s", cfg.PinelabsRefundURL, orderID)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("refund API error: %s", string(body))
+	}
+
+	var refundResp dto.RefundOrderResponse
+	if err := json.NewDecoder(resp.Body).Decode(&refundResp); err != nil {
+		return nil, err
+	}
+
+	return &refundResp, nil
 }

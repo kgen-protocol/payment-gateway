@@ -71,11 +71,6 @@ type OrderAmount struct {
 	Currency string  `json:"currency"`
 }
 
-type PurchaseDetail struct {
-	Customer         Customer          `json:"customer"`
-	MerchantMetadata map[string]string `json:"merchant_metadata"`
-}
-
 type Customer struct {
 	EmailID         string  `json:"email_id"`
 	FirstName       string  `json:"first_name"`
@@ -147,8 +142,113 @@ type PineOrderData struct {
 	AllowedPaymentMethods   []string       `json:"allowed_payment_methods"`
 	PurchaseDetails         PurchaseDetail `json:"purchase_details"`
 	Payments                []Payment      `json:"payments"`
+	Refunds                 []Refund       `json:"refunds"`
 	CreatedAt               time.Time      `json:"created_at"`
 	UpdatedAt               time.Time      `json:"updated_at"`
 	IntegrationMode         string         `json:"integration_mode"`
 	PaymentRetriesRemaining int            `json:"payment_retries_remaining"`
+}
+
+// type RefundRequest struct {
+// 	OrderID string `json:"order_id"`
+// }
+
+// type RefundAPIResponse struct {
+// 	Success bool                  `json:"success"`
+// 	Message string                `json:"message"`
+// 	Data    RefundAPIResponseData `json:"data"`
+// }
+
+// type RefundAPIResponseData struct {
+// 	Status   string `json:"status"`
+// 	RefundID string `json:"refund_id"`
+// }
+
+// type RefundPayload struct {
+// 	OrderID                string           `json:"order_id"`
+// 	MerchantOrderReference string           `json:"merchant_order_reference"`
+// 	OrderAmount            OrderAmount      `json:"order_amount"`
+// 	Amount                 interface{}      `json:"amount"`
+// 	MerchantMetadata       MerchantMetadata `json:"merchant_meta_data"`
+// }
+// type MerchantMetadata struct {
+// 	Key1 string `json:"key1"`
+// 	Key2 string `json:"key_2"`
+// }
+
+type RefundRequest struct {
+	OrderID string `json:"order_id"`
+	// MerchantOrderReference string           `json:"merchant_order_reference"`
+	OrderAmount int `json:"order_amount"`
+	// MerchantMetadata       MerchantMetadata `json:"merchant_metadata"`
+}
+
+type MerchantMetadata struct {
+	Key1 string `json:"key1"`
+	Key2 string `json:"key_2"`
+}
+
+type RefundResponse struct {
+	Data struct {
+		OrderID                string           `json:"order_id"`
+		MerchantOrderReference string           `json:"merchant_order_reference"`
+		Type                   string           `json:"type"`
+		Status                 string           `json:"status"`
+		CallbackURL            string           `json:"callback_url"`
+		FailureCallbackURL     string           `json:"failure_callback_url"`
+		MerchantID             string           `json:"merchant_id"`
+		OrderAmount            OrderAmount      `json:"order_amount"`
+		Notes                  string           `json:"notes"`
+		PreAuth                bool             `json:"pre_auth"`
+		AllowedPaymentMethods  []string         `json:"allowed_payment_methods"`
+		PurchaseDetails        PurchaseDetail   `json:"purchase_details"`
+		Payments               []Payment        `json:"payments"`
+		Refunds                []Refund         `json:"refunds"`
+		MerchantMetadata       MerchantMetadata `json:"merchant_meta_data"`
+		CreatedAt              string           `json:"created_at"`
+		UpdatedAt              string           `json:"updated_at"`
+		IntegrationMode        string           `json:"integration_mode"`
+	} `json:"data"`
+}
+
+type PurchaseDetail struct {
+	Customer         Customer         `json:"customer"`
+	MerchantMetadata MerchantMetadata `json:"merchant_metadata"`
+}
+
+type Refund struct {
+	MerchantOrderReference string         `json:"merchant_order_reference"`
+	OrderID                string         `json:"order_id"`
+	Type                   string         `json:"type"`
+	Status                 string         `json:"status"`
+	OrderAmount            OrderAmount    `json:"order_amount"`
+	Payments               []Payment      `json:"payments"`
+	PurchaseDetails        PurchaseDetail `json:"purchase_details"`
+	CreatedAt              string         `json:"created_at"`
+	UpdatedAt              string         `json:"updated_at"`
+}
+
+type RefundOrderResponse struct {
+	Data RefundOrderData `json:"data"`
+}
+
+type RefundOrderData struct {
+	OrderID                 string          `json:"order_id"`
+	ParentOrderID           string          `json:"parent_order_id"`
+	MerchantOrderReference  string          `json:"merchant_order_reference"`
+	Type                    string          `json:"type"`
+	Status                  string          `json:"status"`
+	MerchantID              string          `json:"merchant_id"`
+	OrderAmount             Amount          `json:"order_amount"`
+	PurchaseDetails         PurchaseDetails `json:"purchase_details"`
+	Payments                []Payment       `json:"payments"`
+	CreatedAt               string          `json:"created_at"`
+	UpdatedAt               string          `json:"updated_at"`
+	IntegrationMode         string          `json:"integration_mode"`
+	PaymentRetriesRemaining int             `json:"payment_retries_remaining"`
+}
+
+type PurchaseDetails struct {
+	Customer         Customer          `json:"customer"`
+	MerchantMetadata map[string]string `json:"merchant_metadata"`
 }

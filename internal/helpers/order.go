@@ -6,6 +6,7 @@ import (
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
 	"github.com/aakritigkmit/payment-gateway/internal/model"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // StructToMap converts a struct to a map[string]interface{}
@@ -100,7 +101,7 @@ func MapPineOrderToTransactionModel(data *dto.PineOrderResponse) model.Transacti
 		MerchantID:            data.Data.MerchantID,
 		CallbackURL:           data.Data.CallbackURL,
 		FailureCallbackURL:    data.Data.FailureCallbackURL,
-		PurchaseDetails: model.PurchaseDetails{
+		PurchaseDetails: model.PurchaseDetail{
 			Customer: model.Customer{
 				EmailID:         data.Data.PurchaseDetails.Customer.EmailID,
 				FirstName:       data.Data.PurchaseDetails.Customer.FirstName,
@@ -110,12 +111,197 @@ func MapPineOrderToTransactionModel(data *dto.PineOrderResponse) model.Transacti
 				BillingAddress:  model.Address(data.Data.PurchaseDetails.Customer.BillingAddress),
 				ShippingAddress: model.Address(data.Data.PurchaseDetails.Customer.ShippingAddress),
 			},
-			MerchantMetadata: data.Data.PurchaseDetails.MerchantMetadata,
+			MerchantMetadata: model.MerchantMetadata(data.Data.PurchaseDetails.MerchantMetadata),
 		},
 		PineOrderID:     data.Data.OrderID,
 		Status:          data.Data.Status,
 		IntegrationMode: data.Data.IntegrationMode,
 		Payments:        payments,
+		CreatedAt:       data.Data.CreatedAt,
+		UpdatedAt:       data.Data.UpdatedAt,
+	}
+}
+
+// utils/refund.go
+
+// func ConvertRefundDTOToModelWithTxID(resp dto.RefundResponse, transactionID primitive.ObjectID) model.Refund {
+// 	return model.Refund{
+// 		TransactionID:          transactionID,
+// 		MerchantOrderReference: resp.Data.MerchantOrderReference,
+// 		OrderID:                resp.Data.OrderID,
+// 		Type:                   resp.Data.Type,
+// 		Status:                 resp.Data.Status,
+// 		OrderAmount:            resp.Data.OrderAmount,
+// 		Payments:               resp.Data.Payments,
+// 		PurchaseDetails:        resp.Data.PurchaseDetails,
+// 		CreatedAt:              resp.Data.CreatedAt,
+// 		UpdatedAt:              resp.Data.UpdatedAt,
+// 	}
+// }
+
+// func MapRefundResponseToRefundModel(data *dto.RefundResponse, transactionID primitive.ObjectID) model.Refund {
+// 	if len(data.Data.Refunds) == 0 {
+// 		return model.Refund{} // or handle error if required
+// 	}
+
+// 	refundData := data.Data.Refunds[0]
+
+// 	// Map payments
+// 	payments := make([]model.Payment, 0)
+// 	for _, p := range refundData.Payments {
+// 		payments = append(payments, model.Payment{
+// 			ID:                       p.ID,
+// 			MerchantPaymentReference: p.MerchantPaymentReference,
+// 			Status:                   p.Status,
+// 			PaymentMethod:            p.PaymentMethod,
+// 			PaymentAmount: model.OrderAmount{
+// 				Value:    p.PaymentAmount.Value,
+// 				Currency: p.PaymentAmount.Currency,
+// 			},
+// 			AcquirerData: model.AcquirerData{
+// 				ApprovalCode:      p.AcquirerData.ApprovalCode,
+// 				AcquirerReference: p.AcquirerData.AcquirerReference,
+// 				RRN:               p.AcquirerData.RRN,
+// 				IsAggregator:      p.AcquirerData.IsAggregator,
+// 				AcquirerName:      p.AcquirerData.AcquirerName,
+// 			},
+// 			CreatedAt: p.CreatedAt,
+// 			UpdatedAt: p.UpdatedAt,
+// 		})
+// 	}
+
+// 	return model.Refund{
+// 		TransactionID:          transactionID,
+// 		MerchantOrderReference: refundData.MerchantOrderReference,
+// 		OrderID:                refundData.OrderID,
+// 		Type:                   refundData.Type,
+// 		Status:                 refundData.Status,
+// 		OrderAmount: model.OrderAmount{
+// 			Value:    refundData.OrderAmount.Value,
+// 			Currency: refundData.OrderAmount.Currency,
+// 		},
+// 		Payments: payments,
+// 		PurchaseDetails: model.PurchaseDetail{
+// 			Customer: model.Customer{
+// 				CountryCode:     refundData.PurchaseDetails.Customer.CountryCode,
+// 				BillingAddress:  model.Address(refundData.PurchaseDetails.Customer.BillingAddress),
+// 				ShippingAddress: model.Address(refundData.PurchaseDetails.Customer.ShippingAddress),
+// 			},
+// 			MerchantMetadata: model.MerchantMetadata(refundData.PurchaseDetails.MerchantMetadata),
+// 		},
+// 		CreatedAt: refundData.CreatedAt,
+// 		UpdatedAt: refundData.UpdatedAt,
+// 	}
+// }
+
+func MapRefundsToTransactionModel(data *dto.PineOrderResponse, transactionID primitive.ObjectID) model.Transaction {
+	// Map Payments
+	payments := make([]model.Payment, 0)
+	for _, p := range data.Data.Payments {
+		payments = append(payments, model.Payment{
+			ID:                       p.ID,
+			MerchantPaymentReference: p.MerchantPaymentReference,
+			Status:                   p.Status,
+			PaymentMethod:            p.PaymentMethod,
+			PaymentAmount: model.OrderAmount{
+				Value:    p.PaymentAmount.Value,
+				Currency: p.PaymentAmount.Currency,
+			},
+			AcquirerData: model.AcquirerData{
+				ApprovalCode:      p.AcquirerData.ApprovalCode,
+				AcquirerReference: p.AcquirerData.AcquirerReference,
+				RRN:               p.AcquirerData.RRN,
+				IsAggregator:      p.AcquirerData.IsAggregator,
+				AcquirerName:      p.AcquirerData.AcquirerName,
+			},
+			CreatedAt: p.CreatedAt,
+			UpdatedAt: p.UpdatedAt,
+		})
+	}
+
+	// Map Refunds
+	refunds := make([]model.Refund, 0)
+	for _, r := range data.Data.Refunds {
+		// Map nested payments inside refunds
+		refundPayments := make([]model.Payment, 0)
+		for _, p := range r.Payments {
+			refundPayments = append(refundPayments, model.Payment{
+				ID:                       p.ID,
+				MerchantPaymentReference: p.MerchantPaymentReference,
+				Status:                   p.Status,
+				PaymentMethod:            p.PaymentMethod,
+				PaymentAmount: model.OrderAmount{
+					Value:    p.PaymentAmount.Value,
+					Currency: p.PaymentAmount.Currency,
+				},
+				AcquirerData: model.AcquirerData{
+					ApprovalCode:      p.AcquirerData.ApprovalCode,
+					AcquirerReference: p.AcquirerData.AcquirerReference,
+					RRN:               p.AcquirerData.RRN,
+					IsAggregator:      p.AcquirerData.IsAggregator,
+					AcquirerName:      p.AcquirerData.AcquirerName,
+				},
+				CreatedAt: p.CreatedAt,
+				UpdatedAt: p.UpdatedAt,
+			})
+		}
+
+		refunds = append(refunds, model.Refund{
+			TransactionID:          transactionID,
+			MerchantOrderReference: r.MerchantOrderReference,
+			OrderID:                r.OrderID,
+			Type:                   r.Type,
+			Status:                 r.Status,
+			OrderAmount: model.OrderAmount{
+				Value:    r.OrderAmount.Value,
+				Currency: r.OrderAmount.Currency,
+			},
+			Payments: refundPayments,
+			PurchaseDetails: model.PurchaseDetail{
+				Customer: model.Customer{
+					CountryCode:     r.PurchaseDetails.Customer.CountryCode,
+					BillingAddress:  model.Address(r.PurchaseDetails.Customer.BillingAddress),
+					ShippingAddress: model.Address(r.PurchaseDetails.Customer.ShippingAddress),
+				},
+				MerchantMetadata: model.MerchantMetadata(r.PurchaseDetails.MerchantMetadata),
+			},
+			CreatedAt: r.CreatedAt,
+			UpdatedAt: r.UpdatedAt,
+		})
+	}
+
+	// Final Transaction Model with Refunds
+	return model.Transaction{
+		OrderId:                data.Data.OrderID,
+		MerchantOrderReference: data.Data.MerchantOrderReference,
+		OrderAmount: model.OrderAmount{
+			Value:    data.Data.OrderAmount.Value,
+			Currency: data.Data.OrderAmount.Currency,
+		},
+		PreAuth:               data.Data.PreAuth,
+		AllowedPaymentMethods: data.Data.AllowedPaymentMethods,
+		Notes:                 data.Data.Notes,
+		Type:                  data.Data.Type,
+		MerchantID:            data.Data.MerchantID,
+		CallbackURL:           data.Data.CallbackURL,
+		FailureCallbackURL:    data.Data.FailureCallbackURL,
+		PurchaseDetails: model.PurchaseDetail{
+			Customer: model.Customer{
+				EmailID:         data.Data.PurchaseDetails.Customer.EmailID,
+				FirstName:       data.Data.PurchaseDetails.Customer.FirstName,
+				LastName:        data.Data.PurchaseDetails.Customer.LastName,
+				CustomerID:      data.Data.PurchaseDetails.Customer.CustomerID,
+				MobileNumber:    data.Data.PurchaseDetails.Customer.MobileNumber,
+				BillingAddress:  model.Address(data.Data.PurchaseDetails.Customer.BillingAddress),
+				ShippingAddress: model.Address(data.Data.PurchaseDetails.Customer.ShippingAddress),
+			},
+			MerchantMetadata: model.MerchantMetadata(data.Data.PurchaseDetails.MerchantMetadata),
+		},
+		PineOrderID:     data.Data.OrderID,
+		Status:          data.Data.Status,
+		IntegrationMode: data.Data.IntegrationMode,
+		Payments:        payments,
+		Refunds:         refunds, // ✅ Added refunds here
 		CreatedAt:       data.Data.CreatedAt,
 		UpdatedAt:       data.Data.UpdatedAt,
 	}

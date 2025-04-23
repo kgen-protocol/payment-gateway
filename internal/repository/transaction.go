@@ -29,3 +29,14 @@ func (r *TransactionRepo) UpdateTransactionByOrderID(ctx context.Context, orderI
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
+
+func (r *TransactionRepo) GetTransactionByPineOrderID(ctx context.Context, pineOrderID string) (model.Transaction, error) {
+
+	var tx model.Transaction
+	err := r.collection.FindOne(ctx, bson.M{"order_id": pineOrderID}).Decode(&tx)
+	if err != nil {
+		return model.Transaction{}, err
+	}
+
+	return tx, nil
+}
