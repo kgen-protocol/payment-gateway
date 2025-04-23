@@ -281,6 +281,8 @@ func (s *ProductService) ProcessBulkProductTransactionAsync(ctx context.Context,
 	}
 
 	const numWorkers = 10
+	createDelay := 300 * time.Millisecond
+	fetchDelay := 500 * time.Millisecond
 
 	var (
 		wg             sync.WaitGroup
@@ -311,6 +313,8 @@ func (s *ProductService) ProcessBulkProductTransactionAsync(ctx context.Context,
 					continue
 				}
 
+				time.Sleep(createDelay) // before CreateTX
+
 				if err := utils.CreateDTOneTransaction(ctx, t.ExternalID, t.LineItem.ProductID, req.MobileNumber); err != nil {
 					log.Printf("[WARN] [Worker %d] CreateTX failed for %s: %v", workerID, t.ExternalID, err)
 					mu.Lock()
@@ -319,7 +323,7 @@ func (s *ProductService) ProcessBulkProductTransactionAsync(ctx context.Context,
 					continue
 				}
 
-				time.Sleep(300 * time.Millisecond) // avoid hammering API
+				time.Sleep(fetchDelay) // before FetchTX
 
 				txs, err := utils.FetchDTOneTransactionByExternalID(ctx, t.ExternalID)
 				if err != nil || len(txs) == 0 {
@@ -381,6 +385,8 @@ func (s *ProductService) ProcessBulkProductTransactionAsync(ctx context.Context,
 	// Retry failed transactions
 	for _, t := range retryTasks {
 		log.Printf("[RETRY] Retrying CreateTX for ExternalID: %s", t.ExternalID)
+		time.Sleep(createDelay) // before CreateTX
+
 		if err := utils.CreateDTOneTransaction(ctx, t.ExternalID, t.LineItem.ProductID, req.MobileNumber); err != nil {
 			log.Printf("[ERROR] Final CreateTX failed for %s: %v", t.ExternalID, err)
 			continue
@@ -389,8 +395,10 @@ func (s *ProductService) ProcessBulkProductTransactionAsync(ctx context.Context,
 	}
 
 	for _, t := range retryFetchOnly {
-		time.Sleep(300 * time.Millisecond)
+
 		log.Printf("[RETRY] Fetching transaction post-retry for ExternalID: %s", t.ExternalID)
+
+		time.Sleep(fetchDelay) // before FetchTX
 
 		txs, err := utils.FetchDTOneTransactionByExternalID(ctx, t.ExternalID)
 		if err != nil || len(txs) == 0 {
