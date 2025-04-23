@@ -19,4 +19,5 @@ func SetupOrderRoutes(r chi.Router, db *mongo.Database) {
 
 	r.With(middlewares.AuthMiddleware).Post("/place", orderHandler.PlaceOrder)
 	r.Post("/callback/order-status", orderHandler.HandleCallback)
+	r.With(middlewares.AuthMiddleware).Post("/refund", orderHandler.RefundOrder)
 }

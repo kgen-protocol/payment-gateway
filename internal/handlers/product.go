@@ -39,6 +39,7 @@ func (h *ProductHandler) HandleProductTransaction(w http.ResponseWriter, r *http
 	var req dto.CreateTransactionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+
 		return
 	}
 
