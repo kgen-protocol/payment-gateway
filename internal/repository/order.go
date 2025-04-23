@@ -12,14 +12,16 @@ import (
 )
 
 type OrderRepo struct {
-	collection       *mongo.Collection
-	collectionRefund *mongo.Collection
+	collection               *mongo.Collection
+	collectionRefund         *mongo.Collection
+	collectionRefundResponse *mongo.Collection
 }
 
 func NewOrderRepo(db *mongo.Database) *OrderRepo {
 	return &OrderRepo{
-		collection:       db.Collection("orders"),
-		collectionRefund: db.Collection("refund"),
+		collection:               db.Collection("orders"),
+		collectionRefund:         db.Collection("refund"),
+		collectionRefundResponse: db.Collection("refundCreateRespo"),
 	}
 }
 
@@ -116,7 +118,7 @@ func (r *OrderRepo) SaveRefund(ctx context.Context, refund model.Transaction) er
 
 func (r *OrderRepo) SaveRefundResponse(ctx context.Context, refund *dto.RefundOrderResponse) error {
 
-	_, err := r.collectionRefund.InsertOne(ctx, refund)
+	_, err := r.collectionRefundResponse.InsertOne(ctx, refund)
 	if err != nil {
 		return fmt.Errorf("failed to insert refund: %w", err)
 	}

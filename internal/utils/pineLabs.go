@@ -155,7 +155,7 @@ func CreateRefundRequest(ctx context.Context, accessToken, orderID string, paylo
 		return nil, fmt.Errorf("refund API error: %s", string(body))
 	}
 
-	var refundResp dto.RefundResponse
+	var refundResp dto.RefundOrderResponse
 	if err := json.NewDecoder(resp.Body).Decode(&refundResp); err != nil {
 		return nil, err
 	}
