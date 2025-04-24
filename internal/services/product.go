@@ -30,46 +30,89 @@ func NewProductService(productRepo *repository.ProductRepo, productTransactionRe
 	}
 }
 
-func (s *ProductService) SyncProducts(ctx context.Context) error {
-	products, err := utils.FetchDTOneProducts(ctx)
+func (s *ProductService) SyncProducts(ctx context.Context, filter dto.ProductSyncRequest) error {
+	startTime := time.Now()
+
+	const perPage = 100
+	const fetchConcurrency = 10
+	const dbWorkerCount = 20
+
+	log.Println("🔄 Starting DT One product sync...")
+
+	_, totalPages, err := utils.FetchDTOneProducts(ctx, 1, perPage, filter)
 	if err != nil {
+		log.Printf("❌ Failed to fetch initial product page: %v", err)
 		return err
 	}
+	log.Printf("📄 Total pages to sync: %d", totalPages)
 
-	productChan := make(chan model.Product)
-	errChan := make(chan error)
-	done := make(chan bool)
+	productChan := make(chan model.Product, 2000)
+	errChan := make(chan error, 1000)
 
-	// Start 5 workers
-	for i := 0; i < 5; i++ {
-		go func() {
+	var dbWg sync.WaitGroup
+	dbWg.Add(dbWorkerCount)
+
+	for i := 0; i < dbWorkerCount; i++ {
+		go func(workerID int) {
+			defer dbWg.Done()
 			for product := range productChan {
 				if err := s.productRepo.FindOrCreateProduct(ctx, product); err != nil {
-					errChan <- err
+					errChan <- fmt.Errorf("worker %d: failed to save product %d: %w", workerID, product.UniqueId, err)
 				}
 			}
-			done <- true
-		}()
+		}(i)
 	}
 
-	// Feed products to channel
+	var fetchWg sync.WaitGroup
+	pageChan := make(chan int, totalPages)
+
 	go func() {
-		for _, product := range products {
-			productChan <- product
+		for p := 1; p <= totalPages; p++ {
+			pageChan <- p
 		}
+		close(pageChan)
+	}()
+
+	for i := 0; i < fetchConcurrency; i++ {
+		fetchWg.Add(1)
+		go func(workerID int) {
+			defer fetchWg.Done()
+			for page := range pageChan {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					log.Printf("🌐 [Fetcher %d] Fetching page %d...", workerID, page)
+					pageProducts, _, err := utils.FetchDTOneProducts(ctx, page, perPage, filter)
+					if err != nil {
+						errChan <- fmt.Errorf("page %d fetch error: %w", page, err)
+						continue
+					}
+					log.Printf("📦 [Fetcher %d] Page %d: fetched %d products", workerID, page, len(pageProducts))
+					for _, product := range pageProducts {
+						productChan <- product
+					}
+				}
+			}
+		}(i)
+	}
+
+	go func() {
+		fetchWg.Wait()
 		close(productChan)
 	}()
 
-	// Wait for workers
-	for i := 0; i < 5; i++ {
-		<-done
-	}
+	dbWg.Wait()
 	close(errChan)
 
+	errCount := 0
 	for err := range errChan {
-		log.Printf("failed to save product: %v", err)
+		log.Printf("❌ Error: %v", err)
+		errCount++
 	}
 
+	log.Printf("✅ DT One product sync complete with %d errors.", errCount)
+	log.Printf("Total execution time: %v", time.Since(startTime))
 	return nil
 }
 

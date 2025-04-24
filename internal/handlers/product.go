@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -23,7 +24,17 @@ func NewProductHandler(service *services.ProductService) *ProductHandler {
 func (h *ProductHandler) SyncProducts(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	err := h.service.SyncProducts(ctx)
+	var req dto.ProductSyncRequest
+	if r.Body != nil {
+		defer r.Body.Close()
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil && err != io.EOF {
+			utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+			return
+		}
+	}
+
+	err := h.service.SyncProducts(ctx, req)
 	if err != nil {
 		fmt.Println("err: ", err)
 		utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())

@@ -8,96 +8,66 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/aakritigkmit/payment-gateway/internal/config"
+	"github.com/aakritigkmit/payment-gateway/internal/dto"
 	"github.com/aakritigkmit/payment-gateway/internal/model"
 )
 
-func FetchDTOneProducts(ctx context.Context) ([]model.Product, error) {
+func FetchDTOneProducts(ctx context.Context, page, perPage int, filter dto.ProductSyncRequest) ([]model.Product, int, error) {
 	cfg := config.GetConfig()
 
-	// Construct Basic Auth
 	auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", cfg.DtOneUsername, cfg.DtOnePassword)))
 
-	// Create HTTP request
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.DtOneProductsURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Basic "+auth)
+	params := url.Values{}
+	params.Set("per_page", strconv.Itoa(perPage))
+	params.Set("page", strconv.Itoa(page))
 
-	// Execute the request
+	if filter.ServiceID != 0 {
+		params.Set("service_id", strconv.Itoa(filter.ServiceID))
+	}
+	if filter.CountryISOCode != "" {
+		params.Set("country_iso_code", filter.CountryISOCode)
+	}
+	if filter.Type != "" {
+		params.Set("type", filter.Type)
+	}
+
+	fullURL := fmt.Sprintf("%s?%s", cfg.DtOneProductsURL, params.Encode())
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+	req.Header.Set("Authorization", "Basic "+auth)
+	req.Header.Set("Content-Type", "application/json")
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP request failed: %w", err)
+		return nil, 0, fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Decode response body
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, 0, fmt.Errorf("status: %d, body: %s", resp.StatusCode, body)
+	}
+
 	var products []model.Product
 	if err := json.NewDecoder(resp.Body).Decode(&products); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, 0, fmt.Errorf("decode error: %w", err)
 	}
 
-	// Check for non-200 status codes
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch products: status %d, response: %+v", resp.StatusCode, products)
+	totalPagesStr := resp.Header.Get("X-Total-Pages")
+	totalPages, err := strconv.Atoi(totalPagesStr)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid total pages header: %w", err)
 	}
 
-	return products, nil
+	return products, totalPages, nil
 }
-
-// func CreateDTOneTransaction(ctx context.Context, externalID string, productID int, mobileNumber string) error {
-// 	cfg := config.GetConfig()
-// 	auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", cfg.DtOneUsername, cfg.DtOnePassword)))
-
-// 	payload := map[string]interface{}{
-// 		"external_id": externalID,
-// 		"product_id":  productID,
-// 		"credit_party_identifier": map[string]string{
-// 			"mobile_number": mobileNumber,
-// 		},
-// 		"auto_confirm": true,
-// 	}
-// 	data, _ := json.Marshal(payload)
-
-// 	var (
-// 		resp *http.Response
-// 	)
-
-// 	for attempt := 1; attempt <= 5; attempt++ {
-// 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.DtOneTransactionURL, bytes.NewBuffer(data))
-// 		if err != nil {
-// 			return err
-// 		}
-// 		req.Header.Set("Content-Type", "application/json")
-// 		req.Header.Set("Authorization", "Basic "+auth)
-
-// 		resp, err = http.DefaultClient.Do(req)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		defer resp.Body.Close()
-
-// 		if resp.StatusCode == 429 {
-// 			wait := time.Duration(1<<uint(attempt-1)) * time.Second // 1s, 2s, 4s, 8s...
-// 			log.Printf("Rate limited (429), retrying in %v (attempt %d/5)", wait, attempt)
-// 			time.Sleep(wait)
-// 			continue
-// 		}
-
-// 		if resp.StatusCode >= 300 {
-// 			body, _ := io.ReadAll(resp.Body)
-// 			return fmt.Errorf("failed to create transaction, status: %d, body: %s", resp.StatusCode, string(body))
-// 		}
-
-// 		// success
-// 		return nil
-// 	}
-
-// 	return fmt.Errorf("failed to create transaction after retries: status: %d", resp.StatusCode)
-// }
 
 func CreateDTOneTransaction(ctx context.Context, externalID string, productID int, mobileNumber string) error {
 	cfg := config.GetConfig()
