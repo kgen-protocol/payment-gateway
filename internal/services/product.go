@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/aakritigkmit/payment-gateway/internal/repository"
 	"github.com/aakritigkmit/payment-gateway/internal/utils"
 	"github.com/google/uuid"
+	"golang.org/x/time/rate"
 )
 
 type ProductService struct {
@@ -93,84 +95,113 @@ func (s *ProductService) CreateAndSaveTransaction(ctx context.Context, req dto.C
 	return nil
 }
 
-func (s *ProductService) CreateAndSaveBulkTransactions(ctx context.Context, req dto.BulkTransactionRequest) error {
+func (s *ProductService) InitBulkProductTransaction(ctx context.Context, req dto.BulkTransactionRequest) (string, error) {
+	orderId := uuid.New().String()
+
+	productOrder := model.ProductPin{
+		OrderID:     orderId,
+		ProductPins: []model.ProductPinItem{}, // initially empty, to be filled later
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	if err := s.productOrderRepo.SaveProductPins(ctx, productOrder); err != nil {
+		return "", err
+	}
+	return orderId, nil
+}
+
+func (s *ProductService) ProcessBulkProductTransactionAsync(ctx context.Context, req dto.BulkTransactionRequest, orderId string) error {
 	startTime := time.Now()
-	const (
-		numWorkers = 30
-		maxRetries = 5
-		baseDelay  = 2 * time.Second
-	)
+
+	log.Printf("[INFO] Started processing bulk transaction for OrderID: %s", orderId)
 
 	type task struct {
 		LineItem   dto.LineItem
 		ExternalID string
 	}
 
-	// Total quantity from request
-	expectedQty := 0
-	for _, item := range req.LineItems {
-		expectedQty += item.Quantity
-	}
+	const numWorkers = 5
+	createDelay := 250 * time.Millisecond
+	fetchDelay := 250 * time.Millisecond
 
-	taskChan := make(chan task)
-	resultChan := make(chan model.ProductPinItem, expectedQty) // buffered to avoid blocking
-	errorChan := make(chan error, expectedQty)
+	var (
+		wg             sync.WaitGroup
+		taskChan       = make(chan task)
+		resultChan     = make(chan model.ProductPinItem)
+		retryTasks     = make([]task, 0)
+		retryFetchOnly = make([]task, 0)
+		mu             sync.Mutex
+	)
 
-	var wg sync.WaitGroup
+	limiter := rate.NewLimiter(20, 1)
 
-	// Start workers
-	for w := 0; w < numWorkers; w++ {
+	// Workers
+	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
-		go func() {
+		go func(workerID int) {
 			defer wg.Done()
+			log.Printf("[INFO] Worker %d started", workerID)
+
 			for t := range taskChan {
+				log.Printf("[DEBUG] [Worker %d] Handling task ExternalID: %s, ProductID: %d", workerID, t.ExternalID, t.LineItem.ProductID)
+
 				txRecord := model.ProductTransaction{
 					ExternalID: t.ExternalID,
 					CreatedAt:  time.Now(),
 					UpdatedAt:  time.Now(),
 				}
-
-				// Save initial transaction
 				if err := s.productTransactionRepo.SaveProductTransaction(ctx, txRecord); err != nil {
-					errorChan <- fmt.Errorf("initial save failed for %s: %w", t.ExternalID, err)
+					log.Printf("[ERROR] [Worker %d] Initial save failed for %s: %v", workerID, t.ExternalID, err)
 					continue
 				}
 
-				// Create DT One transaction
-				var err error
-				for attempt := 1; attempt <= maxRetries; attempt++ {
-					err = utils.CreateDTOneTransaction(ctx, t.ExternalID, t.LineItem.ProductID, req.MobileNumber)
-					if err == nil {
-						break
-					}
-					time.Sleep(baseDelay * time.Duration(attempt))
+				time.Sleep(createDelay) // before CreateTX
+
+				if err := limiter.Wait(ctx); err != nil {
+					log.Printf("[ERROR] Rate limiter: %v", err)
+					continue
 				}
+
+				err := retryOn429(ctx, func() error {
+					return utils.CreateDTOneTransaction(ctx, t.ExternalID, t.LineItem.ProductID, req.MobileNumber)
+				})
 				if err != nil {
-					errorChan <- fmt.Errorf("CreateTX failed for %s: %w", t.ExternalID, err)
+					log.Printf("[WARN] CreateTX failed after retries: %v", err)
+					mu.Lock()
+					retryTasks = append(retryTasks, t)
+					mu.Unlock()
 					continue
 				}
 
-				// Fetch transaction details
-				var txs []model.ProductTransaction
-				for attempt := 1; attempt <= maxRetries; attempt++ {
-					time.Sleep(baseDelay * time.Duration(attempt))
-					txs, err = utils.FetchDTOneTransactionByExternalID(ctx, t.ExternalID)
-					if err == nil && len(txs) > 0 {
-						break
-					}
-				}
+				// if err := utils.CreateDTOneTransaction(ctx, t.ExternalID, t.LineItem.ProductID, req.MobileNumber); err != nil {
+				// 	log.Printf("[WARN] [Worker %d] CreateTX failed for %s: %v", workerID, t.ExternalID, err)
+				// 	mu.Lock()
+				// 	retryTasks = append(retryTasks, t)
+				// 	mu.Unlock()
+				// 	continue
+				// }
+
+				time.Sleep(fetchDelay) // before FetchTX
+
+				txs, err := utils.FetchDTOneTransactionByExternalID(ctx, t.ExternalID)
 				if err != nil || len(txs) == 0 {
-					errorChan <- fmt.Errorf("FetchTX failed for %s: %w", t.ExternalID, err)
+					log.Printf("[WARN] [Worker %d] FetchTX failed for %s: %v", workerID, t.ExternalID, err)
+					mu.Lock()
+					retryFetchOnly = append(retryFetchOnly, t)
+					mu.Unlock()
+
 					continue
 				}
 
-				// Update and collect pin
 				for _, tx := range txs {
 					tx.UpdatedAt = time.Now()
 					if err := s.productTransactionRepo.UpdateProductTransaction(ctx, tx.ExternalID, tx); err != nil {
-						errorChan <- fmt.Errorf("UpdateTX failed for %s: %w", tx.ExternalID, err)
+						log.Printf("[ERROR] [Worker %d] UpdateTX failed for %s: %v", workerID, tx.ExternalID, err)
 						continue
 					}
+					log.Printf("[INFO] [Worker %d] TX fetched - ExternalID: %s, ProductID: %d, Pin: %s, Serial: %s",
+						workerID, tx.ExternalID, tx.Product.UniqueId, tx.Pin.Code, tx.Pin.Serial)
 
 					resultChan <- model.ProductPinItem{
 						ExternalID: tx.ExternalID,
@@ -185,71 +216,288 @@ func (s *ProductService) CreateAndSaveBulkTransactions(ctx context.Context, req 
 					}
 				}
 			}
-		}()
+			log.Printf("[INFO] Worker %d exited", workerID)
+		}(i)
 	}
 
-	// Collector
-	var (
-		successPins = make([]model.ProductPinItem, 0, expectedQty)
-		saveErrors  = make([]error, 0)
-	)
-	collectDone := make(chan struct{})
 	go func() {
-		for i := 0; i < expectedQty; i++ {
-			select {
-			case pin := <-resultChan:
-				successPins = append(successPins, pin)
-			case err := <-errorChan:
-				saveErrors = append(saveErrors, err)
-			}
-		}
-		close(collectDone)
-	}()
-
-	// Push tasks
-	go func() {
+		log.Printf("[DEBUG] Dispatching tasks...")
 		for _, item := range req.LineItems {
 			for i := 0; i < item.Quantity; i++ {
-				taskChan <- task{
-					LineItem:   item,
-					ExternalID: fmt.Sprintf("TX-%s-%d", uuid.New().String()[:8], item.ProductID),
-				}
+				externalID := fmt.Sprintf("TX-%s-%d", uuid.New().String()[:8], item.ProductID)
+				log.Printf("[DEBUG] Queuing task for ProductID: %d, ExternalID: %s", item.ProductID, externalID)
+				taskChan <- task{LineItem: item, ExternalID: externalID}
 			}
 		}
 		close(taskChan)
 	}()
 
-	// Wait for workers and collector
-	wg.Wait()
-	close(resultChan)
-	close(errorChan)
-	<-collectDone
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
 
-	if len(successPins) > 0 {
-		orderID := uuid.New().String()
-		pinDoc := model.ProductPin{
-			OrderID:     orderID,
-			ProductPins: successPins,
+	var pinItems []model.ProductPinItem
+	for pin := range resultChan {
+		pinItems = append(pinItems, pin)
+	}
+
+	// Retry failed transactions
+	for _, t := range retryTasks {
+		log.Printf("[RETRY] Retrying CreateTX for ExternalID: %s", t.ExternalID)
+		time.Sleep(createDelay) // before CreateTX
+
+		if err := utils.CreateDTOneTransaction(ctx, t.ExternalID, t.LineItem.ProductID, req.MobileNumber); err != nil {
+			log.Printf("[ERROR] Final CreateTX failed for %s: %v", t.ExternalID, err)
+			continue
+		}
+		retryFetchOnly = append(retryFetchOnly, t)
+	}
+
+	for _, t := range retryFetchOnly {
+
+		log.Printf("[RETRY] Fetching transaction post-retry for ExternalID: %s", t.ExternalID)
+
+		time.Sleep(fetchDelay) // before FetchTX
+
+		txs, err := utils.FetchDTOneTransactionByExternalID(ctx, t.ExternalID)
+		if err != nil || len(txs) == 0 {
+			log.Printf("[ERROR] Final FetchTX failed for %s: %v", t.ExternalID, err)
+			continue
+		}
+
+		for _, tx := range txs {
+			tx.UpdatedAt = time.Now()
+			if err := s.productTransactionRepo.UpdateProductTransaction(ctx, tx.ExternalID, tx); err != nil {
+				log.Printf("[ERROR] UpdateTX (after retry) failed for %s: %v", tx.ExternalID, err)
+				continue
+			}
+
+			pinItems = append(pinItems, model.ProductPinItem{
+				ExternalID: tx.ExternalID,
+				ProductID:  t.LineItem.ProductID,
+				Pin: struct {
+					Code   string `bson:"code"`
+					Serial string `bson:"serial"`
+				}{
+					Code:   tx.Pin.Code,
+					Serial: tx.Pin.Serial,
+				},
+			})
+		}
+	}
+
+	// Dump pins
+	if len(pinItems) > 0 {
+		log.Printf("[INFO] Dumping %d pins for OrderID: %s", len(pinItems), orderId)
+		dump := model.ProductPinDump{
+			OrderID:     orderId,
+			ProductPins: pinItems,
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		}
-		if err := s.productOrderRepo.SaveProductPins(ctx, pinDoc); err != nil {
-			log.Printf("SaveProductPins error: %v", err)
-			saveErrors = append(saveErrors, err)
-		} else {
-			log.Printf("Saved %d pins under OrderID %s", len(successPins), orderID)
+		if err := s.productOrderRepo.SaveProductPinsDump(ctx, dump); err != nil {
+			log.Printf("[ERROR] Error saving pin dump for OrderID %s: %v", orderId, err)
 		}
 	}
 
-	// Final log
-	log.Printf("Reconciliation: Expected=%d, Saved=%d, Errors=%d", expectedQty, len(successPins), len(saveErrors))
-	log.Printf("Total execution time: %v", time.Since(startTime)) // <-- Add before success return
-	if len(saveErrors) > 0 {
-		for i, err := range saveErrors {
-			fmt.Printf("[%d] %v\n", i+1, err)
-		}
-		return fmt.Errorf("completed with %d errors", len(saveErrors))
+	// Final update to ProductOrder
+	finalPins, err := s.productOrderRepo.GetPinsByOrderID(ctx, orderId)
+	if err != nil {
+		log.Printf("[ERROR] Error fetching dumped pins for OrderID %s: %v", orderId, err)
+		return err
 	}
 
+	log.Printf("Total execution time for OrderID %s: %v", orderId, time.Since(startTime))
+
+	if err := s.productOrderRepo.UpdateProductOrderWithPins(ctx, orderId, finalPins); err != nil {
+		log.Printf("[ERROR] Error updating ProductOrder with final pins for OrderID %s: %v", orderId, err)
+		return err
+	}
+
+	log.Printf("[SUCCESS] OrderID %s processed with %d total pins", orderId, len(finalPins))
 	return nil
 }
+
+func retryOn429(ctx context.Context, fn func() error) error {
+	backoff := time.Second
+	for i := 0; i < 5; i++ {
+		err := fn()
+		if err == nil {
+			return nil
+		}
+		if strings.Contains(err.Error(), "429") {
+			log.Printf("[RETRY] 429 received. Backing off for %v...", backoff)
+			time.Sleep(backoff)
+			backoff *= 2 // exponential backoff
+			continue
+		}
+		return err
+	}
+	return fmt.Errorf("failed after retries")
+}
+
+// func (s *ProductService) ProcessBulkProductTransactionAsync(ctx context.Context, req dto.BulkTransactionRequest, orderId string) error {
+// 	startTime := time.Now()
+
+// 	const (
+// 		numWorkers = 10
+// 		maxRetries = 5
+// 		baseDelay  = 2 * time.Second
+// 	)
+
+// 	type task struct {
+// 		LineItem   dto.LineItem
+// 		ExternalID string
+// 		OrderID    string
+// 	}
+
+// 	expectedQty := 0
+// 	for _, item := range req.LineItems {
+// 		expectedQty += item.Quantity
+// 	}
+
+// 	log.Printf("[OrderID %s] Starting async processing with %d expected items", orderId, expectedQty)
+
+// 	taskChan := make(chan task)
+// 	resultChan := make(chan model.ProductPinItem, expectedQty)
+// 	errorChan := make(chan error, expectedQty)
+
+// 	var wg sync.WaitGroup
+
+// 	for w := 0; w < numWorkers; w++ {
+// 		wg.Add(1)
+// 		go func(workerID int) {
+// 			defer wg.Done()
+// 			log.Printf("[Worker %d] Started", workerID)
+// 			for t := range taskChan {
+// 				log.Printf("[Worker %d] Processing task: ExternalID=%s, ProductID=%d", workerID, t.ExternalID, t.LineItem.ProductID)
+
+// 				txRecord := model.ProductTransaction{
+// 					ExternalID: t.ExternalID,
+// 					CreatedAt:  time.Now(),
+// 					UpdatedAt:  time.Now(),
+// 				}
+
+// 				if err := s.productTransactionRepo.SaveProductTransaction(ctx, txRecord); err != nil {
+// 					errorChan <- fmt.Errorf("initial save failed for %s: %w", t.ExternalID, err)
+// 					continue
+// 				}
+// 				log.Printf("[Worker %d] Saved initial transaction for %s", workerID, t.ExternalID)
+
+// 				var err error
+// 				for attempt := 1; attempt <= maxRetries; attempt++ {
+// 					err = utils.CreateDTOneTransaction(ctx, t.ExternalID, t.LineItem.ProductID, req.MobileNumber)
+// 					if err == nil {
+// 						break
+// 					}
+// 					log.Printf("[Worker %d] CreateTX retry %d for %s failed: %v", workerID, attempt, t.ExternalID, err)
+// 					time.Sleep(baseDelay * time.Duration(attempt))
+// 				}
+// 				if err != nil {
+// 					errorChan <- fmt.Errorf("CreateTX failed for %s: %w", t.ExternalID, err)
+// 					continue
+// 				}
+// 				log.Printf("[Worker %d] CreateTX successful for %s", workerID, t.ExternalID)
+
+// 				var txs []model.ProductTransaction
+// 				for attempt := 1; attempt <= maxRetries; attempt++ {
+// 					time.Sleep(baseDelay * time.Duration(attempt))
+// 					txs, err = utils.FetchDTOneTransactionByExternalID(ctx, t.ExternalID)
+// 					if err == nil && len(txs) > 0 {
+// 						break
+// 					}
+// 					log.Printf("[Worker %d] FetchTX retry %d for %s: %v", workerID, attempt, t.ExternalID, err)
+// 				}
+// 				if err != nil || len(txs) == 0 {
+// 					errorChan <- fmt.Errorf("FetchTX failed for %s: %w", t.ExternalID, err)
+// 					continue
+// 				}
+// 				log.Printf("[Worker %d] FetchTX successful for %s", workerID, t.ExternalID)
+
+// 				for _, tx := range txs {
+// 					tx.UpdatedAt = time.Now()
+// 					if err := s.productTransactionRepo.UpdateProductTransaction(ctx, tx.ExternalID, tx); err != nil {
+// 						errorChan <- fmt.Errorf("UpdateTX failed for %s: %w", tx.ExternalID, err)
+// 						continue
+// 					}
+// 					log.Printf("[Worker %d] UpdateTX successful for %s", workerID, tx.ExternalID)
+
+// 					resultChan <- model.ProductPinItem{
+// 						ExternalID: tx.ExternalID,
+// 						ProductID:  t.LineItem.ProductID,
+// 						Pin: struct {
+// 							Code   string `bson:"code"`
+// 							Serial string `bson:"serial"`
+// 						}{
+// 							Code:   tx.Pin.Code,
+// 							Serial: tx.Pin.Serial,
+// 						},
+// 					}
+// 				}
+// 			}
+// 			log.Printf("[Worker %d] Finished", workerID)
+// 		}(w)
+// 	}
+
+// 	successPins := make([]model.ProductPinItem, 0, expectedQty)
+// 	saveErrors := make([]error, 0)
+// 	collectDone := make(chan struct{})
+
+// 	go func() {
+// 		for i := 0; i < expectedQty; i++ {
+// 			select {
+// 			case pin := <-resultChan:
+// 				log.Printf("Collected PIN: ExternalID=%s, ProductID=%d", pin.ExternalID, pin.ProductID)
+// 				successPins = append(successPins, pin)
+// 			case err := <-errorChan:
+// 				log.Printf("Error collected: %v", err)
+// 				saveErrors = append(saveErrors, err)
+// 			}
+// 		}
+// 		close(collectDone)
+// 	}()
+
+// 	go func() {
+// 		for _, item := range req.LineItems {
+// 			for i := 0; i < item.Quantity; i++ {
+// 				externalID := fmt.Sprintf("TX-%s-%d", uuid.New().String()[:8], item.ProductID)
+// 				taskChan <- task{
+// 					LineItem:   item,
+// 					ExternalID: externalID,
+// 					OrderID:    orderId,
+// 				}
+// 				log.Printf("Dispatched task: ExternalID=%s, ProductID=%d", externalID, item.ProductID)
+// 			}
+// 		}
+// 		close(taskChan)
+// 	}()
+
+// 	wg.Wait()
+// 	close(resultChan)
+// 	close(errorChan)
+// 	<-collectDone
+
+// 	log.Printf("[OrderID %s] All workers and collector finished", orderId)
+
+// 	if len(successPins) > 0 {
+// 		if err := s.productOrderRepo.UpdateProductPins(ctx, orderId, successPins); err != nil {
+// 			log.Printf("UpdateProductPins error for OrderID %s: %v", orderId, err)
+// 			saveErrors = append(saveErrors, err)
+// 		} else {
+// 			log.Printf("Successfully updated %d pins for OrderID %s", len(successPins), orderId)
+// 		}
+// 	}
+
+// 	log.Printf("Reconciliation for OrderID %s: Expected=%d, Saved=%d, Errors=%d", orderId, expectedQty, len(successPins), len(saveErrors))
+// 	log.Printf("Total execution time for OrderID %s: %v", orderId, time.Since(startTime))
+
+// 	if len(saveErrors) > 0 {
+// 		for i, err := range saveErrors {
+// 			log.Printf("[Error %d] %v", i+1, err)
+// 		}
+// 		return fmt.Errorf("completed with %d errors", len(saveErrors))
+// 	}
+
+// 	return nil
+// }

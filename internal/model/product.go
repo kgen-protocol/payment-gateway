@@ -162,3 +162,10 @@ type Pin struct {
 	Code   string `bson:"code" json:"code"`
 	Serial string `bson:"serial" json:"serial"`
 }
+
+type ProductPinDump struct {
+	OrderID     string           `bson:"orderID"`
+	ProductPins []ProductPinItem `bson:"productPins"`
+	CreatedAt   time.Time        `bson:"created_at"`
+	UpdatedAt   time.Time        `bson:"updated_at"`
+}
