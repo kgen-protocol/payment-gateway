@@ -281,8 +281,8 @@ func (s *ProductService) ProcessBulkProductTransactionAsync(ctx context.Context,
 	}
 
 	const numWorkers = 10
-	createDelay := 300 * time.Millisecond
-	fetchDelay := 500 * time.Millisecond
+	createDelay := 250 * time.Millisecond
+	fetchDelay := 250 * time.Millisecond
 
 	var (
 		wg             sync.WaitGroup
