@@ -108,3 +108,9 @@ type CreateTransactionRequest struct {
 	ProductID    int    `json:"product_id"`
 	MobileNumber string `json:"mobile_number"`
 }
+
+type ProductSyncRequest struct {
+	ServiceID      int    `json:"service_id"`
+	CountryISOCode string `json:"country_iso_code"`
+	Type           string `json:"type"`
+}
