@@ -37,17 +37,19 @@ func (s *ProductService) SyncProducts(ctx context.Context, filter dto.ProductSyn
 	const fetchConcurrency = 10
 	const dbWorkerCount = 20
 
-	log.Println("🔄 Starting DT One product sync...")
+	log.Println("Starting DT One product sync...")
 
 	_, totalPages, err := utils.FetchDTOneProducts(ctx, 1, perPage, filter)
 	if err != nil {
-		log.Printf("❌ Failed to fetch initial product page: %v", err)
+		log.Printf("Failed to fetch initial product page: %v", err)
 		return err
 	}
-	log.Printf("📄 Total pages to sync: %d", totalPages)
+	log.Printf("Total pages to sync: %d", totalPages)
 
 	productChan := make(chan model.Product, 2000)
-	errChan := make(chan error, 1000)
+	saveErrChan := make(chan ProductSaveError, 1000)
+	fetchErrChan := make(chan FetchPageError, 1000)
+	successChan := make(chan int, 2000)
 
 	var dbWg sync.WaitGroup
 	dbWg.Add(dbWorkerCount)
@@ -57,7 +59,12 @@ func (s *ProductService) SyncProducts(ctx context.Context, filter dto.ProductSyn
 			defer dbWg.Done()
 			for product := range productChan {
 				if err := s.productRepo.FindOrCreateProduct(ctx, product); err != nil {
-					errChan <- fmt.Errorf("worker %d: failed to save product %d: %w", workerID, product.UniqueId, err)
+					saveErrChan <- ProductSaveError{
+						ProductID: product.UniqueId,
+						ErrorMsg:  fmt.Sprintf("worker %d: failed to save product: %v", workerID, err),
+					}
+				} else {
+					successChan <- product.UniqueId
 				}
 			}
 		}(i)
@@ -82,13 +89,16 @@ func (s *ProductService) SyncProducts(ctx context.Context, filter dto.ProductSyn
 				case <-ctx.Done():
 					return
 				default:
-					log.Printf("🌐 [Fetcher %d] Fetching page %d...", workerID, page)
+					log.Printf("[Fetcher %d] Fetching page %d...", workerID, page)
 					pageProducts, _, err := utils.FetchDTOneProducts(ctx, page, perPage, filter)
 					if err != nil {
-						errChan <- fmt.Errorf("page %d fetch error: %w", page, err)
+						fetchErrChan <- FetchPageError{
+							Page:     page,
+							ErrorMsg: fmt.Sprintf("fetcher %d: page %d fetch error: %v", workerID, page, err),
+						}
 						continue
 					}
-					log.Printf("📦 [Fetcher %d] Page %d: fetched %d products", workerID, page, len(pageProducts))
+					log.Printf("[Fetcher %d] Page %d: fetched %d products", workerID, page, len(pageProducts))
 					for _, product := range pageProducts {
 						productChan <- product
 					}
@@ -97,22 +107,63 @@ func (s *ProductService) SyncProducts(ctx context.Context, filter dto.ProductSyn
 		}(i)
 	}
 
+	// Closing channels after fetchers and db workers complete
 	go func() {
 		fetchWg.Wait()
 		close(productChan)
 	}()
 
-	dbWg.Wait()
-	close(errChan)
+	go func() {
+		dbWg.Wait()
+		close(successChan)
+		close(saveErrChan)
+		close(fetchErrChan)
+	}()
 
-	errCount := 0
-	for err := range errChan {
-		log.Printf("❌ Error: %v", err)
-		errCount++
+	// Collect results
+	var (
+		successIDs        []int
+		productSaveErrors []ProductSaveError
+		fetchPageErrors   []FetchPageError
+	)
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	go func() {
+		defer wg.Done()
+		for id := range successChan {
+			successIDs = append(successIDs, id)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for e := range saveErrChan {
+			log.Printf("Save Error: %v", e)
+			productSaveErrors = append(productSaveErrors, e)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for e := range fetchErrChan {
+			log.Printf("Fetch Error: %v", e)
+			fetchPageErrors = append(fetchPageErrors, e)
+		}
+	}()
+
+	wg.Wait()
+
+	log.Printf("DT One product sync complete. Success: %d, Save Errors: %d, Fetch Errors: %d.", len(successIDs), len(productSaveErrors), len(fetchPageErrors))
+	log.Printf("Total execution time: %v", time.Since(startTime))
+
+	// Generate the XLSX Report
+	err = GenerateProductSyncReport(len(successIDs), len(productSaveErrors), len(fetchPageErrors), productSaveErrors, fetchPageErrors)
+	if err != nil {
+		log.Printf("Failed to generate sync report: %v", err)
 	}
 
-	log.Printf("✅ DT One product sync complete with %d errors.", errCount)
-	log.Printf("Total execution time: %v", time.Since(startTime))
 	return nil
 }
 

@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -22,7 +21,6 @@ func NewProductHandler(service *services.ProductService) *ProductHandler {
 }
 
 func (h *ProductHandler) SyncProducts(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 
 	var req dto.ProductSyncRequest
 	if r.Body != nil {
@@ -34,14 +32,19 @@ func (h *ProductHandler) SyncProducts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err := h.service.SyncProducts(ctx, req)
-	if err != nil {
-		fmt.Println("err: ", err)
-		utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	// Launch background job
+	go func() {
+		bgCtx := context.Background()
 
-	utils.SendSuccessResponse(w, http.StatusOK, "Products fetched and saved successfully", nil)
+		err := h.service.SyncProducts(bgCtx, req)
+		if err != nil {
+			log.Printf("Background sync failed: %v", err)
+		} else {
+			log.Println("Background sync completed successfully.")
+		}
+	}()
+
+	utils.SendSuccessResponse(w, http.StatusAccepted, "Products are syncing in the background", nil)
 }
 
 func (h *ProductHandler) HandleProductTransaction(w http.ResponseWriter, r *http.Request) {
