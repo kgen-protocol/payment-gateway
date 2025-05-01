@@ -114,3 +114,7 @@ type ProductSyncRequest struct {
 	CountryISOCode string `json:"country_iso_code"`
 	Type           string `json:"type"`
 }
+
+type ProductReportByIDRequest struct {
+	ProductIDs []int `json:"product_ids"`
+}

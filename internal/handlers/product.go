@@ -47,6 +47,47 @@ func (h *ProductHandler) SyncProducts(w http.ResponseWriter, r *http.Request) {
 	utils.SendSuccessResponse(w, http.StatusAccepted, "Products are syncing in the background", nil)
 }
 
+func (h *ProductHandler) GenerateProductReport(w http.ResponseWriter, r *http.Request) {
+	var req dto.ProductSyncRequest
+	if r.Body != nil {
+		defer r.Body.Close()
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+			utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+			return
+		}
+	}
+
+	go func() {
+		bgCtx := context.Background()
+		if err := h.service.GenerateProductFetchReport(bgCtx, req); err != nil {
+			log.Printf("Product report generation failed: %v", err)
+		} else {
+			log.Println("Product report generated successfully.")
+		}
+	}()
+
+	utils.SendSuccessResponse(w, http.StatusAccepted, "Product report is being generated in the background", nil)
+}
+
+func (h *ProductHandler) GenerateProductReportByIDs(w http.ResponseWriter, r *http.Request) {
+	var req dto.ProductReportByIDRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || len(req.ProductIDs) == 0 {
+		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid or missing product IDs")
+		return
+	}
+
+	go func() {
+		bgCtx := context.Background()
+		if err := h.service.GenerateProductReportByIDs(bgCtx, req.ProductIDs); err != nil {
+			log.Printf("[ReportByIDs] Report generation failed: %v", err)
+		} else {
+			log.Println("[ReportByIDs] Report generated successfully.")
+		}
+	}()
+
+	utils.SendSuccessResponse(w, http.StatusAccepted, "Product report is being generated in the background", nil)
+}
+
 func (h *ProductHandler) HandleProductTransaction(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

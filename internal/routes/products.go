@@ -19,6 +19,8 @@ func SetupProductRoutes(r chi.Router, db *mongo.Database) {
 
 	// Define routes
 	r.With(middlewares.AuthMiddleware).Post("/sync", productHandler.SyncProducts)
+	// r.With(middlewares.AuthMiddleware).Post("/report", productHandler.GenerateProductReport)
+	r.With(middlewares.AuthMiddleware).Post("/report", productHandler.GenerateProductReportByIDs)
 	r.With(middlewares.AuthMiddleware).Post("/transaction", productHandler.HandleProductTransaction)
 	r.With(middlewares.AuthMiddleware).Post("/transactions/bulk", productHandler.CreateBulkProductTransaction)
 
