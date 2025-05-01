@@ -167,6 +167,119 @@ func (s *ProductService) SyncProducts(ctx context.Context, filter dto.ProductSyn
 	return nil
 }
 
+func (s *ProductService) GenerateProductFetchReport(ctx context.Context, filter dto.ProductSyncRequest) error {
+	startTime := time.Now()
+
+	const perPage = 100
+	const fetchConcurrency = 10
+
+	start := time.Now()
+	log.Println("[Report] Starting DT One product report generation...")
+
+	// Step 1: Initial fetch to get total pages
+	_, totalPages, err := utils.FetchDTOneProducts(ctx, 1, perPage, filter)
+	if err != nil {
+		log.Printf("[Report] Initial fetch failed: %v", err)
+		return err
+	}
+	log.Printf("[Report] Total pages to fetch: %d", totalPages)
+
+	productChan := make(chan model.Product, 5000)
+	pageChan := make(chan int, totalPages)
+
+	// Step 2: Producer - feed page numbers
+	go func() {
+		for i := 1; i <= totalPages; i++ {
+			log.Printf("[Producer] Queuing page %d", i)
+			pageChan <- i
+		}
+		close(pageChan)
+		log.Println("[Producer] All pages queued.")
+	}()
+
+	// Step 3: Fetchers - concurrent data fetch
+	var fetchWg sync.WaitGroup
+	for i := 0; i < fetchConcurrency; i++ {
+		fetchWg.Add(1)
+		go func(workerID int) {
+			defer fetchWg.Done()
+			log.Printf("[Fetcher %d] Started.", workerID)
+			for page := range pageChan {
+				select {
+				case <-ctx.Done():
+					log.Printf("[Fetcher %d] Context cancelled. Exiting.", workerID)
+					return
+				default:
+					products, _, err := utils.FetchDTOneProducts(ctx, page, perPage, filter)
+					if err != nil {
+						log.Printf("[Fetcher %d] Page %d error: %v", workerID, page, err)
+						continue
+					}
+					log.Printf("[Fetcher %d] Fetched %d products from page %d", workerID, len(products), page)
+					for _, p := range products {
+						productChan <- p
+					}
+				}
+			}
+			log.Printf("[Fetcher %d] Completed.", workerID)
+		}(i)
+	}
+
+	// Step 4: Closer - close product channel after all fetchers complete
+	go func() {
+		fetchWg.Wait()
+		close(productChan)
+		log.Println("[Collector] All fetchers done. Product channel closed.")
+	}()
+
+	// Step 5: Collector - gather all products
+	var allProducts []model.Product
+	count := 0
+	for product := range productChan {
+		allProducts = append(allProducts, product)
+		count++
+		if count%100 == 0 {
+			log.Printf("[Collector] Collected %d products so far...", count)
+		}
+	}
+
+	log.Printf("[Report] Fetched total %d products in %v", len(allProducts), time.Since(start))
+
+	// Step 6: Generate Excel report
+	log.Println("[Report] Generating Excel report...")
+	err = ExportProductsToExcel(allProducts)
+	if err != nil {
+		log.Printf("[Report] Excel generation failed: %v", err)
+		return err
+	}
+	log.Println("[Report] Excel report generated successfully.")
+	log.Printf("Total execution time: %v", time.Since(startTime))
+
+	return nil
+}
+
+func (s *ProductService) GenerateProductReportByIDs(ctx context.Context, productIDs []int) error {
+	log.Println("[ReportByIDs] Starting product report generation by IDs...")
+	start := time.Now()
+
+	products, err := s.productRepo.GetProductsByUniqueIDs(ctx, productIDs)
+	if err != nil {
+		log.Printf("[ReportByIDs] DB fetch failed: %v", err)
+		return err
+	}
+
+	log.Printf("[ReportByIDs] Retrieved %d products from DB", len(products))
+
+	log.Println("[ReportByIDs] Generating Excel...")
+	if err := ExportProductsToExcel(products); err != nil {
+		log.Printf("[ReportByIDs] Excel generation failed: %v", err)
+		return err
+	}
+
+	log.Printf("[ReportByIDs] Report successfully generated in %v", time.Since(start))
+	return nil
+}
+
 func (s *ProductService) CreateAndSaveTransaction(ctx context.Context, req dto.CreateTransactionRequest) error {
 	// Step 1: Create transaction via DT One
 	if err := utils.CreateDTOneTransaction(ctx, req.ExternalID, req.ProductID, req.MobileNumber); err != nil {

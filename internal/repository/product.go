@@ -39,3 +39,19 @@ func (r *ProductRepo) FindOrCreateProduct(ctx context.Context, product model.Pro
 
 	return nil
 }
+
+func (r *ProductRepo) GetProductsByUniqueIDs(ctx context.Context, ids []int) ([]model.Product, error) {
+	filter := bson.M{"unique_id": bson.M{"$in": ids}}
+
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var products []model.Product
+	if err := cursor.All(ctx, &products); err != nil {
+		return nil, err
+	}
+	return products, nil
+}
