@@ -36,7 +36,7 @@ func (h *ProductHandler) SyncProducts(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		bgCtx := context.Background()
 
-		err := h.service.SyncProducts(bgCtx, req)
+		err := h.service.SyncProducts(bgCtx)
 		if err != nil {
 			log.Printf("Background sync failed: %v", err)
 		} else {
