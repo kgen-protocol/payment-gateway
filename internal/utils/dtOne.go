@@ -35,6 +35,10 @@ func FetchDTOneProducts(ctx context.Context, page, perPage int, filter dto.Produ
 		params.Set("type", filter.Type)
 	}
 
+	if filter.OperatorID != 0 {
+		params.Set("operator_id", strconv.Itoa(filter.OperatorID))
+	}
+
 	fullURL := fmt.Sprintf("%s?%s", cfg.DtOneProductsURL, params.Encode())
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
