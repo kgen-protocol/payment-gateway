@@ -113,8 +113,13 @@ type ProductSyncRequest struct {
 	ServiceID      int    `json:"service_id"`
 	CountryISOCode string `json:"country_iso_code"`
 	Type           string `json:"type"`
+	OperatorID     int    `json:"operator_id"`
 }
 
 type ProductReportByIDRequest struct {
 	ProductIDs []int `json:"product_ids"`
+}
+
+type ProductSyncMappedRequest struct {
+	OperatorKeys []string `json:"operator_keys"` // e.g. ["Roblox", "PlayStation"]
 }
