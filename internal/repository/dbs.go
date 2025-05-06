@@ -17,7 +17,8 @@ func NewDBSRepo(db *mongo.Database) *DBSRepo {
 		collection: db.Collection("dbs_bank_statements"),
 	}
 }
-func (r *DBSRepo) SaveBankStatement(ctx context.Context, resp *model.Camt053Response) error {
-	_, err := r.collection.InsertOne(ctx, resp)
+
+func (r *DBSRepo) SaveBankStatement(ctx context.Context, req model.Camt053Request) error {
+	_, err := r.collection.InsertOne(ctx, req)
 	return err
 }

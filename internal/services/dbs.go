@@ -17,7 +17,12 @@ func NewDBSService(dbsRepo *repository.DBSRepo) *DBSService {
 }
 
 func (s *DBSService) ProcessBankStatement(req model.Camt053Request) (*model.Camt053Response, error) {
-	// Simulated response for now
+	// Save the raw incoming request as-is
+	if err := s.DBSRepo.SaveBankStatement(context.Background(), req); err != nil {
+		return nil, err
+	}
+
+	// Simulate or generate response (as needed)
 	resp := &model.Camt053Response{
 		Header: model.Camt053Header{
 			MsgId:     req.Header.MsgId,
@@ -34,10 +39,6 @@ func (s *DBSService) ProcessBankStatement(req model.Camt053Request) (*model.Camt
 			BizDate:     req.TxnInfo.BizDate,
 			MessageType: req.TxnInfo.MessageType,
 		},
-	}
-
-	if err := s.DBSRepo.SaveBankStatement(context.Background(), resp); err != nil {
-		return nil, err
 	}
 
 	return resp, nil
