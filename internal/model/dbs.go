@@ -1,43 +1,40 @@
 package model
 
-import "time"
-
-type DBSHeader struct {
-	MsgID     string    `json:"msgId" bson:"msgId"`
-	OrgID     string    `json:"orgId" bson:"orgId"`
-	TimeStamp time.Time `json:"timeStamp" bson:"timeStamp"`
-	Country   string    `json:"ctry" bson:"ctry"`
+type Camt053Header struct {
+	MsgId     string `json:"msgId"`
+	OrgId     string `json:"orgId"`
+	TimeStamp string `json:"timeStamp"`
+	Country      string `json:"ctry"`
 }
 
-type DBSParty struct {
-	Name         string `json:"name" bson:"name"`
-	AccountNo    string `json:"accountNo,omitempty" bson:"accountNo,omitempty"`
-	SenderBankID string `json:"senderBankId,omitempty" bson:"senderBankId,omitempty"`
+type Camt053TxnInfo struct {
+	AccountNo   string `json:"accountNo"`
+	AccountCcy  string `json:"accountCcy"`
+	BizDate     string `json:"bizDate"`
+	MessageType string `json:"messageType"`
 }
 
-type DBSAmountDetails struct {
-	TxnCurrency string  `json:"txnCcy" bson:"txnCcy"`
-	TxnAmount   float64 `json:"txnAmt" bson:"txnAmt"`
+type Camt053Request struct {
+	Header  Camt053Header  `json:"header"`
+	TxnInfo Camt053TxnInfo `json:"txnInfo"`
 }
 
-type DBSRmtInfo struct {
-	PaymentDetails string `json:"paymentDetails,omitempty" bson:"paymentDetails,omitempty"`
-	PurposeCode    string `json:"purposeCode,omitempty" bson:"purposeCode,omitempty"`
+type Camt053Response struct {
+	Header         Camt053Header  `json:"header"`
+	TxnEnqResponse TxnEnqResponse `json:"txnEnqResponse"`
 }
 
-type DBSTxnInfo struct {
-	TxnType           string           `json:"txnType" bson:"txnType"`
-	CustomerReference string           `json:"customerReference" bson:"customerReference"`
-	TxnRefID          string           `json:"txnRefId" bson:"txnRefId"`
-	TxnDate           string           `json:"txnDate" bson:"txnDate"`
-	ValueDate         string           `json:"valueDt" bson:"valueDt"`
-	ReceivingParty    DBSParty         `json:"receivingParty" bson:"receivingParty"`
-	AmountDetails     DBSAmountDetails `json:"amtDtls" bson:"amtDtls"`
-	SenderParty       DBSParty         `json:"senderParty" bson:"senderParty"`
-	RmtInfo           *DBSRmtInfo      `json:"rmtInf,omitempty" bson:"rmtInf,omitempty"`
+type TxnEnqResponse struct {
+	EnqStatus            string        `json:"enqStatus"`
+	EnqRejectCode        string        `json:"enqRejectCode,omitempty"`
+	EnqStatusDescription string        `json:"enqStatusDescription,omitempty"`
+	AcctInfo             *AcctInfo     `json:"acctInfo,omitempty"`
+	BizDate              string        `json:"bizDate,omitempty"`
+	MessageType          string        `json:"messageType,omitempty"`
+	Statement            []interface{} `json:"statement,omitempty"`
 }
 
-type DBSTransaction struct {
-	Header  DBSHeader  `json:"header" bson:"header"`
-	TxnInfo DBSTxnInfo `json:"txnInfo" bson:"txnInfo"`
+type AcctInfo struct {
+	AccountNo  string `json:"accountNo"`
+	AccountCcy string `json:"accountCcy"`
 }
