@@ -1,4 +1,3 @@
-
 package model
 
 type CAMT053Request struct {
@@ -14,11 +13,13 @@ type Header struct {
 }
 
 type TxnEnqResponse struct {
-	EnqStatus   string             `json:"enqStatus"`
-	AcctInfo    AcctInfo           `json:"acctInfo"`
-	BizDate     string             `json:"bizDate"`
-	MessageType string             `json:"messageType"`
-	Statement   []StatementWrapper `json:"statement"`
+	EnqStatus            string             `json:"enqStatus"`
+	AcctInfo             AcctInfo           `json:"acctInfo"`
+	BizDate              string             `json:"bizDate"`
+	MessageType          string             `json:"messageType"`
+	Statement            []StatementWrapper `json:"statement"`
+	EnqRejectCode        string             `json:"enqRejectCode,omitempty"`
+	EnqStatusDescription string             `json:"enqStatusDescription,omitempty"`
 }
 
 type AcctInfo struct {
@@ -74,7 +75,7 @@ type FinancialInstitutionID struct {
 
 type Balance struct {
 	Tp        BalanceType `json:"tp"`
-	Amt       DbsAmount      `json:"amt"`
+	Amt       DbsAmount   `json:"amt"`
 	CdtDbtInd string      `json:"cdtDbtInd"`
 	Dt        DateObj     `json:"dt"`
 }
@@ -151,7 +152,7 @@ type AmountDetails struct {
 }
 
 type InstructedAmount struct {
-	Amt     DbsAmount            `json:"amt"`
+	Amt     DbsAmount         `json:"amt"`
 	CcyXchg *CurrencyExchange `json:"ccyXchg,omitempty"`
 }
 
@@ -179,4 +180,40 @@ type PartyID struct {
 
 type OrgIDDetails struct {
 	Othr []IDValue `json:"othr"`
+}
+
+//Notification model----------------------------------------------------------------------------------------------------------------------------
+
+type ReceivingParty struct {
+	Name             string `json:"name"`
+	AccountNo        string `json:"accountNo"`
+	VirtualAccountNo string `json:"virtualAccountNo,omitempty"`
+}
+
+type NotificationAmountDetails struct {
+	TxnCurrency string  `json:"txnCcy"`
+	TxnAmount   float64 `json:"txnAmt"`
+}
+
+type SenderParty struct {
+	Name         string `json:"name"`
+	AccountNo    string `json:"accountNo"`
+	SenderBankID string `json:"senderBankId"`
+}
+
+type TxnInfo struct {
+	TxnType           string                    `json:"txnType"`
+	CustomerReference string                    `json:"customerReference"`
+	TxnRefID          string                    `json:"txnRefId"`
+	TxnDate           string                    `json:"txnDate"`
+	ValueDate         string                    `json:"valueDt"`
+	ReceivingParty    ReceivingParty            `json:"receivingParty"`
+	AmountDetails     NotificationAmountDetails `json:"amtDtls"`
+	SenderParty       SenderParty               `json:"senderParty"`
+	PaymentDetails    string                    `json:"paymentDetails"`
+}
+
+type NotificationPayload struct {
+	Header  Header  `json:"header"`
+	TxnInfo TxnInfo `json:"txnInfo"`
 }
