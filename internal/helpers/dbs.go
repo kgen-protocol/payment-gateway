@@ -179,3 +179,79 @@ func MapCAMT053DTOToModel(dto *dto.CAMT053Request) model.CAMT053Request {
 		},
 	}
 }
+
+// MapIntradayNotificationPayload maps the NotificationPayload to the corresponding model
+func MapIntradayNotificationPayload(dto *dto.IntradayNotificationPayload) model.IntradayNotificationPayload {
+	return model.IntradayNotificationPayload{
+		Header: model.Header{
+			MsgID:     dto.Header.MsgID,
+			OrgID:     dto.Header.OrgID,
+			TimeStamp: dto.Header.TimeStamp,
+			Country:   dto.Header.Country,
+		},
+		TxnInfo: model.TxnInfo{
+			TxnType:           dto.TxnInfo.TxnType,
+			CustomerReference: dto.TxnInfo.CustomerReference,
+			TxnRefID:          dto.TxnInfo.TxnRefID,
+			TxnDate:           dto.TxnInfo.TxnDate,
+			ValueDate:         dto.TxnInfo.ValueDate,
+			ReceivingParty: model.ReceivingParty{
+				Name:             dto.TxnInfo.ReceivingParty.Name,
+				AccountNo:        dto.TxnInfo.ReceivingParty.AccountNo,
+				VirtualAccountNo: dto.TxnInfo.ReceivingParty.VirtualAccountNo,
+				ProxyType:        dto.TxnInfo.ReceivingParty.ProxyType,
+				ProxyValue:       dto.TxnInfo.ReceivingParty.ProxyValue,
+			},
+			AmountDetails: model.NotificationAmountDetails{
+				TxnCurrency: dto.TxnInfo.AmountDetails.TxnCurrency,
+				TxnAmount:   dto.TxnInfo.AmountDetails.TxnAmount,
+			},
+			SenderParty: model.SenderParty{
+				Name:         dto.TxnInfo.SenderParty.Name,
+				AccountNo:    dto.TxnInfo.SenderParty.AccountNo,
+				SenderBankID: dto.TxnInfo.SenderParty.SenderBankID,
+			},
+			RmtInf: model.RmtInf{
+				PaymentDetails: dto.TxnInfo.RmtInf.PaymentDetails,
+			},
+		},
+	}
+}
+
+// MapIntradayNotificationPayload maps the NotificationPayload to the corresponding model
+func MapIncomingNotificationPayload(dto *dto.IncomingNotificationPayload) model.IncomingNotificationPayload {
+	return model.IncomingNotificationPayload{
+		Header: model.Header{
+			MsgID:     dto.Header.MsgID,
+			OrgID:     dto.Header.OrgID,
+			TimeStamp: dto.Header.TimeStamp,
+			Country:   dto.Header.Country,
+		},
+		TxnInfo: model.TxnInfo{
+			TxnType:           dto.TxnInfo.TxnType,
+			CustomerReference: dto.TxnInfo.CustomerReference,
+			TxnRefID:          dto.TxnInfo.TxnRefID,
+			TxnDate:           dto.TxnInfo.TxnDate,
+			ValueDate:         dto.TxnInfo.ValueDate,
+			ReceivingParty: model.ReceivingParty{
+				Name:             dto.TxnInfo.ReceivingParty.Name,
+				AccountNo:        dto.TxnInfo.ReceivingParty.AccountNo,
+				VirtualAccountNo: dto.TxnInfo.ReceivingParty.VirtualAccountNo,
+				ProxyType:        dto.TxnInfo.ReceivingParty.ProxyType,
+				ProxyValue:       dto.TxnInfo.ReceivingParty.ProxyValue,
+			},
+			AmountDetails: model.NotificationAmountDetails{
+				TxnCurrency: dto.TxnInfo.AmountDetails.TxnCurrency,
+				TxnAmount:   dto.TxnInfo.AmountDetails.TxnAmount,
+			},
+			SenderParty: model.SenderParty{
+				Name:         dto.TxnInfo.SenderParty.Name,
+				AccountNo:    dto.TxnInfo.SenderParty.AccountNo,
+				SenderBankID: dto.TxnInfo.SenderParty.SenderBankID,
+			},
+			RmtInf: model.RmtInf{
+				PaymentDetails: dto.TxnInfo.RmtInf.PaymentDetails,
+			},
+		},
+	}
+}

@@ -18,6 +18,8 @@ type TxnEnqResponse struct {
 	BizDate     string             `json:"bizDate"`
 	MessageType string             `json:"messageType"`
 	Statement   []StatementWrapper `json:"statement"`
+	// EnqRejectCode        string             `json:"enqRejectCode,omitempty"`
+	// EnqStatusDescription string             `json:"enqStatusDescription,omitempty"`
 }
 
 type AcctInfo struct {
@@ -178,4 +180,57 @@ type PartyID struct {
 
 type OrgIDDetails struct {
 	Othr []IDValue `json:"othr"`
+}
+
+// // Notification DTO
+type ReceivingParty struct {
+	Name             string `json:"name"`
+	AccountNo        string `json:"accountNo"`
+	VirtualAccountNo string `json:"virtualAccountNo,omitempty"`
+	ProxyType        string `json:"proxyType,omitempty"`
+	ProxyValue       string `json:"proxyValue,omitempty"`
+}
+
+type NotificationAmountDetails struct {
+	TxnCurrency string `json:"txnCcy"`
+	TxnAmount   string `json:"txnAmt"`
+}
+
+type SenderParty struct {
+	Name         string `json:"name"`
+	AccountNo    string `json:"accountNo"`
+	SenderBankID string `json:"senderBankId"`
+}
+
+type RmtInf struct {
+	PaymentDetails string `json:"paymentDetails"`
+}
+
+type TxnInfo struct {
+	TxnType           string                    `json:"txnType"`
+	CustomerReference string                    `json:"customerReference"`
+	TxnRefID          string                    `json:"txnRefId"`
+	TxnDate           string                    `json:"txnDate"`
+	ValueDate         string                    `json:"valueDt"`
+	ReceivingParty    ReceivingParty            `json:"receivingParty"`
+	AmountDetails     NotificationAmountDetails `json:"amtDtls"`
+	SenderParty       SenderParty               `json:"senderParty"`
+	PaymentDetails    string                    `json:"paymentDetails"`
+	RmtInf            RmtInf                    `json:"rmtInf omitempty"`
+	PurposeCode       string                    `json:"purposeCode omitempty"`
+}
+
+type NotificationPayload struct {
+	Header  Header  `json:"header"`
+	TxnInfo TxnInfo `json:"txnInfo"`
+}
+
+type IntradayNotificationPayload struct {
+	Header  Header  `json:"header"`
+	TxnInfo TxnInfo `json:"txnInfo"`
+}
+
+type IncomingNotificationPayload struct {
+	Header  Header  `json:"header"`
+	TxnInfo TxnInfo `json:"txnInfo"`
 }

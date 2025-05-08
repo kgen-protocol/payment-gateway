@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
-	"github.com/aakritigkmit/payment-gateway/internal/model"
 	"github.com/aakritigkmit/payment-gateway/internal/services"
 	"github.com/aakritigkmit/payment-gateway/internal/utils"
 )
@@ -39,7 +38,7 @@ func (h *DBSHandler) HandleBankStatement(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *DBSHandler) HandleIntradayNotification(w http.ResponseWriter, r *http.Request) {
-	var payload model.IntradayNotificationPayload
+	var payload dto.IntradayNotificationPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request payload")
 		return
@@ -54,7 +53,7 @@ func (h *DBSHandler) HandleIntradayNotification(w http.ResponseWriter, r *http.R
 }
 
 func (h *DBSHandler) HandleIncomingNotification(w http.ResponseWriter, r *http.Request) {
-	var payload model.IncomingNotificationPayload
+	var payload dto.IncomingNotificationPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request payload")
 		return
@@ -87,7 +86,7 @@ func (h *DBSHandler) HandleDBSEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Try IntradayNotificationPayload
-	var intraday model.IntradayNotificationPayload
+	var intraday dto.IntradayNotificationPayload
 	if err := json.Unmarshal(body, &intraday); err == nil && intraday.TxnInfo.TxnType != "" {
 		if err := h.service.ProcessIntradayNotification(intraday); err != nil {
 			utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -98,7 +97,7 @@ func (h *DBSHandler) HandleDBSEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Try IncomingNotificationPayload
-	var incoming model.IncomingNotificationPayload
+	var incoming dto.IncomingNotificationPayload
 	if err := json.Unmarshal(body, &incoming); err == nil && incoming.TxnInfo.TxnType != "" {
 		if err := h.service.ProcessIncomingNotification(incoming); err != nil {
 			utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
