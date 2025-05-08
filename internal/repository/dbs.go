@@ -25,7 +25,7 @@ func (r *DBSRepo) SaveBankStatement(ctx context.Context, req model.CAMT053Reques
 	return err
 }
 
-func (r *DBSRepo) SaveNotification(ctx context.Context, payload model.NotificationPayload) error {
-	_, err := r.bankNotificationCollection.InsertOne(ctx, payload)
+func (r *DBSRepo) SaveNotification(ctx context.Context, req model.NotificationPayload) error {
+	_, err := r.bankNotificationCollection.InsertOne(ctx, req)
 	return err
 }

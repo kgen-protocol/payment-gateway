@@ -188,16 +188,18 @@ type ReceivingParty struct {
 	Name             string `json:"name"`
 	AccountNo        string `json:"accountNo"`
 	VirtualAccountNo string `json:"virtualAccountNo,omitempty"`
+	ProxyType        string `json:"proxyType,omitempty"`
+	ProxyValue       string `json:"proxyValue,omitempty"`
 }
 
 type NotificationAmountDetails struct {
-	TxnCurrency string  `json:"txnCcy"`
-	TxnAmount   float64 `json:"txnAmt"`
+	TxnCurrency string `json:"txnCcy"`
+	TxnAmount   string `json:"txnAmt"`
 }
 
 type SenderParty struct {
 	Name         string `json:"name"`
-	AccountNo    string `json:"accountNo"`
+	AccountNo    string `json:"accountNo,omitempty"`
 	SenderBankID string `json:"senderBankId"`
 }
 

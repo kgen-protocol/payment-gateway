@@ -149,33 +149,6 @@ type PineOrderData struct {
 	PaymentRetriesRemaining int            `json:"payment_retries_remaining"`
 }
 
-// type RefundRequest struct {
-// 	OrderID string `json:"order_id"`
-// }
-
-// type RefundAPIResponse struct {
-// 	Success bool                  `json:"success"`
-// 	Message string                `json:"message"`
-// 	Data    RefundAPIResponseData `json:"data"`
-// }
-
-// type RefundAPIResponseData struct {
-// 	Status   string `json:"status"`
-// 	RefundID string `json:"refund_id"`
-// }
-
-// type RefundPayload struct {
-// 	OrderID                string           `json:"order_id"`
-// 	MerchantOrderReference string           `json:"merchant_order_reference"`
-// 	OrderAmount            OrderAmount      `json:"order_amount"`
-// 	Amount                 interface{}      `json:"amount"`
-// 	MerchantMetadata       MerchantMetadata `json:"merchant_meta_data"`
-// }
-// type MerchantMetadata struct {
-// 	Key1 string `json:"key1"`
-// 	Key2 string `json:"key_2"`
-// }
-
 type RefundRequest struct {
 	OrderID string `json:"order_id"`
 	// MerchantOrderReference string           `json:"merchant_order_reference"`

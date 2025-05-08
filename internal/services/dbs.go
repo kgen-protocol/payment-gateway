@@ -5,7 +5,6 @@ import (
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
 	"github.com/aakritigkmit/payment-gateway/internal/helpers"
-	"github.com/aakritigkmit/payment-gateway/internal/model"
 	"github.com/aakritigkmit/payment-gateway/internal/repository"
 )
 
@@ -28,9 +27,10 @@ func (s *DBSService) ProcessBankStatement(req dto.CAMT053Request) error {
 	return nil
 }
 
-func (s *DBSService) ProcessNotification(payload model.NotificationPayload) error {
+func (s *DBSService) ProcessNotification(payload dto.NotificationPayload) error {
+	data := helpers.MapNotificationPayload(&payload)
 	// Save to DB
-	if err := s.DBSRepo.SaveNotification(context.Background(), payload); err != nil {
+	if err := s.DBSRepo.SaveNotification(context.Background(), data); err != nil {
 		return err
 	}
 

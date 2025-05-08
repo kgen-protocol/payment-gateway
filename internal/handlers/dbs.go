@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
-	"github.com/aakritigkmit/payment-gateway/internal/model"
 	"github.com/aakritigkmit/payment-gateway/internal/services"
 	"github.com/aakritigkmit/payment-gateway/internal/utils"
 )
@@ -38,7 +37,7 @@ func (h *DBSHandler) HandleBankStatement(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *DBSHandler) HandleNotification(w http.ResponseWriter, r *http.Request) {
-	var payload model.NotificationPayload
+	var payload dto.NotificationPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request payload")
 		return
