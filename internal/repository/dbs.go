@@ -9,15 +9,30 @@ import (
 )
 
 type DBSRepo struct {
-	collection *mongo.Collection
+	bankStatementcollection            *mongo.Collection
+	bankIntradayNotificationCollection *mongo.Collection
+	bankIncomingNotificationCollection *mongo.Collection
 }
 
 func NewDBSRepo(db *mongo.Database) *DBSRepo {
 	return &DBSRepo{
-		collection: db.Collection("dbs_bank_statements"),
+		bankStatementcollection:            db.Collection("dbs_bank_statements"),
+		bankIntradayNotificationCollection: db.Collection("dbs_intraday_bank_notifications"),
+		bankIncomingNotificationCollection: db.Collection("dbs_incoming_bank_notifications"),
 	}
 }
-func (r *DBSRepo) SaveBankStatement(ctx context.Context, resp *model.Camt053Response) error {
-	_, err := r.collection.InsertOne(ctx, resp)
+
+func (r *DBSRepo) SaveBankStatement(ctx context.Context, req model.Camt053Request) error {
+	_, err := r.bankStatementcollection.InsertOne(ctx, req)
+	return err
+}
+
+func (r *DBSRepo) SaveIntradayNotification(ctx context.Context, payload model.IntradayNotificationPayload) error {
+	_, err := r.bankIntradayNotificationCollection.InsertOne(ctx, payload)
+	return err
+}
+
+func (r *DBSRepo) SaveIncomingNotification(ctx context.Context, payload model.IncomingNotificationPayload) error {
+	_, err := r.bankIncomingNotificationCollection.InsertOne(ctx, payload)
 	return err
 }

@@ -17,7 +17,12 @@ func NewDBSService(dbsRepo *repository.DBSRepo) *DBSService {
 }
 
 func (s *DBSService) ProcessBankStatement(req model.Camt053Request) (*model.Camt053Response, error) {
-	// Simulated response for now
+	// Save the raw incoming request as-is
+	if err := s.DBSRepo.SaveBankStatement(context.Background(), req); err != nil {
+		return nil, err
+	}
+
+	// Simulate or generate response (as needed)
 	resp := &model.Camt053Response{
 		Header: model.Camt053Header{
 			MsgId:     req.Header.MsgId,
@@ -36,9 +41,23 @@ func (s *DBSService) ProcessBankStatement(req model.Camt053Request) (*model.Camt
 		},
 	}
 
-	if err := s.DBSRepo.SaveBankStatement(context.Background(), resp); err != nil {
-		return nil, err
+	return resp, nil
+}
+
+func (s *DBSService) ProcessIntradayNotification(payload model.IntradayNotificationPayload) error {
+	// Save to DB
+	if err := s.DBSRepo.SaveIntradayNotification(context.Background(), payload); err != nil {
+		return err
 	}
 
-	return resp, nil
+	return nil
+}
+
+func (s *DBSService) ProcessIncomingNotification(payload model.IncomingNotificationPayload) error {
+	// Save to DB
+	if err := s.DBSRepo.SaveIncomingNotification(context.Background(), payload); err != nil {
+		return err
+	}
+
+	return nil
 }

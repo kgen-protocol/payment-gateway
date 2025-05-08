@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/aakritigkmit/payment-gateway/internal/model"
@@ -33,4 +34,77 @@ func (h *DBSHandler) HandleBankStatement(w http.ResponseWriter, r *http.Request)
 	}
 
 	utils.SendSuccessResponse(w, http.StatusOK, "Bank statement fetched", resp)
+}
+
+func (h *DBSHandler) HandleIntradayNotification(w http.ResponseWriter, r *http.Request) {
+	var payload model.IntradayNotificationPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if err := h.service.ProcessIntradayNotification(payload); err != nil {
+		utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	utils.SendSuccessResponse(w, http.StatusOK, "Intraday Notification processed successfully", nil)
+}
+
+func (h *DBSHandler) HandleIncomingNotification(w http.ResponseWriter, r *http.Request) {
+	var payload model.IncomingNotificationPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if err := h.service.ProcessIncomingNotification(payload); err != nil {
+		utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	utils.SendSuccessResponse(w, http.StatusOK, "Incoming Notification processed successfully", nil)
+}
+func (h *DBSHandler) HandleDBSEvent(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		utils.SendErrorResponse(w, http.StatusBadRequest, "Failed to read request body")
+		return
+	}
+
+	// Try Camt053Request (Bank Statement)
+	var bank model.Camt053Request
+	if err := json.Unmarshal(body, &bank); err == nil && bank.TxnInfo.AccountNo != "" {
+		resp, err := h.service.ProcessBankStatement(bank)
+		if err != nil {
+			utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		utils.SendSuccessResponse(w, http.StatusOK, "Bank statement processed successfully", resp)
+		return
+	}
+
+	// Try IntradayNotificationPayload
+	var intraday model.IntradayNotificationPayload
+	if err := json.Unmarshal(body, &intraday); err == nil && intraday.TxnInfo.TxnType != "" {
+		if err := h.service.ProcessIntradayNotification(intraday); err != nil {
+			utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		utils.SendSuccessResponse(w, http.StatusOK, "Intraday Notification processed successfully", nil)
+		return
+	}
+
+	// Try IncomingNotificationPayload
+	var incoming model.IncomingNotificationPayload
+	if err := json.Unmarshal(body, &incoming); err == nil && incoming.TxnInfo.TxnType != "" {
+		if err := h.service.ProcessIncomingNotification(incoming); err != nil {
+			utils.SendErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		utils.SendSuccessResponse(w, http.StatusOK, "Incoming Notification processed successfully", nil)
+		return
+	}
+
+	utils.SendErrorResponse(w, http.StatusBadRequest, "Invalid or unrecognized payload")
 }
