@@ -2,7 +2,9 @@ package routes
 
 import (
 	"log"
+	"net/http"
 
+	"github.com/aakritigkmit/payment-gateway/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -13,11 +15,15 @@ var routeRegistry = map[string]func(r chi.Router, db *mongo.Database){
 	"orders":   SetupOrderRoutes,
 	"products": SetupProductRoutes,
 	"dbs":      SetupDBSRoutes,
-	"health":   SetupHealthRoutes,
 }
 
 // SetupRoutes initializes all application routes with /api prefix
 func SetupRoutes(r *chi.Mux, db *mongo.Database) {
+
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		utils.SendSuccessResponse(w, http.StatusOK, "API is working correctly", nil)
+	})
+
 	apiRouter := chi.NewRouter()
 
 	for routeName, setupFunc := range routeRegistry {
