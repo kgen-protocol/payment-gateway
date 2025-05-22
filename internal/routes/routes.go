@@ -13,6 +13,7 @@ var routeRegistry = map[string]func(r chi.Router, db *mongo.Database){
 	"orders":   SetupOrderRoutes,
 	"products": SetupProductRoutes,
 	"dbs":      SetupDBSRoutes,
+	"health":   SetupHealthRoutes,
 }
 
 // SetupRoutes initializes all application routes with /api prefix
