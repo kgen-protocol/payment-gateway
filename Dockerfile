@@ -19,7 +19,9 @@ FROM alpine:latest
 
 # Set work directory and copy binary from builder
 WORKDIR /root/
-COPY --from=builder /app .
+COPY --from=builder /app/main .
 
 # Expose the application port
 EXPOSE 8081
+
+CMD ["./main"]
