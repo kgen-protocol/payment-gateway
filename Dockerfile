@@ -12,7 +12,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN go build -o main ./cmd/exlr8-api-gateway
+RUN go build -o main ./cmd
 
 # Stage 2: Deployment
 FROM alpine:latest
