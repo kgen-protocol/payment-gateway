@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
+	"github.com/aakritigkmit/payment-gateway/internal/config"
 	"github.com/aakritigkmit/payment-gateway/internal/dto"
 	"github.com/aakritigkmit/payment-gateway/internal/services"
 	"github.com/aakritigkmit/payment-gateway/internal/utils"
@@ -40,6 +42,9 @@ func (h *OrderHandler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrderHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
+
+	cfg := config.GetConfig()
+
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
@@ -56,8 +61,38 @@ func (h *OrderHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing status", http.StatusBadRequest)
 		return
 	}
+	fmt.Println("status", status)
 
-	go h.service.FetchAndUpdateTransactionDetails(context.Background(), orderID)
+	receivedSignature := r.FormValue("signature")
+	if receivedSignature == "" {
+		http.Error(w, "Missing signature", http.StatusBadRequest)
+		return
+	}
+	fmt.Println("signature", receivedSignature)
+
+	errorCode := r.FormValue("error_code")
+	errorMessage := r.FormValue("error_message")
+
+	// --- MANDATORY SIGNATURE VERIFICATION STEP ---
+	// Generate the signature on your server using the same parameters and secret key.
+	generatedSignature, err := utils.GenerateServerSignature(orderID, status, errorCode, errorMessage, cfg.PinelabsClientSecret)
+	fmt.Printf("error-generated signature: %s\n", generatedSignature)
+	if err != nil {
+		fmt.Printf("Error generating server signature: %v\n", err)
+		http.Error(w, "Internal server error during signature generation", http.StatusInternalServerError)
+		return
+	}
+	fmt.Printf("Server-generated signature: '%s'\n", generatedSignature)
+
+	// Compare the generated signature with the received signature.
+	if strings.ToUpper(generatedSignature) != strings.ToUpper(receivedSignature) {
+		fmt.Printf("Signature mismatch! Received: '%s', Generated: '%s'\n", receivedSignature, generatedSignature)
+		http.Error(w, "Invalid signature: Callback authenticity could not be verified", http.StatusUnauthorized)
+		return
+	}
+	fmt.Println("Signature verified successfully! Proceeding with transaction update.")
+
+	go h.service.FetchAndUpdateTransactionDetails(context.Background(), orderID, receivedSignature)
 
 	utils.SendSuccessResponse(w, http.StatusOK, "Order status updated successfully", nil)
 }
@@ -78,4 +113,3 @@ func (h *OrderHandler) RefundOrder(w http.ResponseWriter, r *http.Request) {
 
 	utils.SendSuccessResponse(w, http.StatusOK, "Refund processed successfully", refundResp)
 }
-

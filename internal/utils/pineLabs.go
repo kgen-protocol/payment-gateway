@@ -3,12 +3,17 @@ package utils
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/aakritigkmit/payment-gateway/internal/config"
@@ -162,3 +167,97 @@ func CreateRefundRequest(ctx context.Context, accessToken, orderID string, paylo
 
 	return &refundResp, nil
 }
+
+func GenerateServerSignature(orderID, paymentStatus, errorCode, errorMessage, hexSecretKey string) (string, error) {
+	// Create a map of parameters for the message string.
+	// The secret_key is NOT part of this message string for HMAC.
+	params := map[string]string{
+		"order_id":       orderID,
+		"payment_status": paymentStatus,
+		"error_code":     errorCode,
+		"error_message":  errorMessage,
+	}
+
+	// Collect keys and sort them alphabetically to ensure consistent order.
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// Build the string for hashing by concatenating key=value pairs with '&'.
+	var sb strings.Builder
+	for _, k := range keys {
+		if sb.Len() > 0 {
+			sb.WriteString("&")
+		}
+		sb.WriteString(k)
+		sb.WriteString("=")
+		sb.WriteString(params[k])
+	}
+
+	dataToHash := sb.String()
+	// IMPORTANT DEBUGGING STEP: Print the exact string that is being hashed.
+	// Compare this string with what you expect Plural to hash.
+	fmt.Printf("DEBUG: String to hash for signature generation: '%s'\n", dataToHash)
+
+	// Decode the hex-encoded secret key into bytes for use with HMAC.
+	keyBytes, err := hex.DecodeString(hexSecretKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode secret key from hex: %w", err)
+	}
+
+	// Create a new HMAC-SHA256 hash.
+	h := hmac.New(sha256.New, keyBytes)
+	h.Write([]byte(dataToHash)) // Write the message string to the HMAC hash.
+
+	// Get the HMAC sum and encode it to a hexadecimal string (uppercase as per Java example).
+	return strings.ToUpper(hex.EncodeToString(h.Sum(nil))), nil
+}
+
+// func GenerateServerSignature(orderID, paymentStatus, errorCode, errorMessage, hexSecretKey string) (string, error) {
+// 	// Create a map of parameters for the message string.
+// 	// The secret_key is NOT part of this message string for HMAC.
+// 	params := map[string]string{
+// 		"order_id":       orderID,
+// 		"payment_status": paymentStatus,
+// 		"error_code":     errorCode,
+// 		"error_message":  errorMessage,
+// 	}
+
+// 	// Collect keys and sort them alphabetically to ensure consistent order.
+// 	keys := make([]string, 0, len(params))
+// 	for k := range params {
+// 		keys = append(keys, k)
+// 	}
+// 	sort.Strings(keys)
+
+// 	// Build the string for hashing by concatenating key=value pairs with '&'.
+// 	var sb strings.Builder
+// 	for _, k := range keys {
+// 		if sb.Len() > 0 {
+// 			sb.WriteString("&")
+// 		}
+// 		sb.WriteString(k)
+// 		sb.WriteString("=")
+// 		sb.WriteString(params[k])
+// 	}
+
+// 	dataToHash := sb.String()
+// 	// IMPORTANT DEBUGGING STEP: Print the exact string that is being hashed.
+// 	// Compare this string with what you expect Plural to hash.
+// 	fmt.Printf("DEBUG: String to hash for signature generation: '%s'\n", dataToHash)
+
+// 	// Decode the hex-encoded secret key into bytes for use with HMAC.
+// 	keyBytes, err := hex.DecodeString(hexSecretKey)
+// 	if err != nil {
+// 		return "", fmt.Errorf("failed to decode secret key from hex: %w", err)
+// 	}
+
+// 	// Create a new HMAC-SHA256 hash.
+// 	h := hmac.New(sha256.New, keyBytes)
+// 	h.Write([]byte(dataToHash)) // Write the message string to the HMAC hash.
+
+// 	// Get the HMAC sum and encode it to a hexadecimal string (uppercase as per Java example).
+// 	return strings.ToUpper(hex.EncodeToString(h.Sum(nil))), nil
+// }

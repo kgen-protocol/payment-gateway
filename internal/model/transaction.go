@@ -45,6 +45,7 @@ type Transaction struct {
 	Token                  string             `json:"token"`
 	RedirectURL            string             `json:"redirect_url"`
 	Status                 string             `json:"status"` // e.g., "PROCESSED"
+	Signature              string             `json:"signature"`
 	Refunds                []Refund           `json:"refunds" bson:"refunds"`
 	IntegrationMode        string             `json:"integration_mode" bson:"integration_mode"`
 	Payments               []Payment          `json:"payments" bson:"payments"`

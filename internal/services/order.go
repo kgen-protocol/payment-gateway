@@ -24,7 +24,7 @@ func NewOrderService(repo *repository.OrderRepo, transactionRepo *repository.Tra
 	return &OrderService{repo, transactionRepo}
 }
 
-func (s *OrderService) FetchAndUpdateTransactionDetails(ctx context.Context, orderID string) {
+func (s *OrderService) FetchAndUpdateTransactionDetails(ctx context.Context, orderID string, receivedSignature string) {
 	go func() {
 		// Use background context to detach from request lifecycle
 		bgCtx := context.Background()
@@ -35,6 +35,7 @@ func (s *OrderService) FetchAndUpdateTransactionDetails(ctx context.Context, ord
 		}
 
 		data, err := utils.GetOrderDetails(bgCtx, tokenResp.AccessToken, orderID)
+		fmt.Println(" data:", data)
 
 		jsonBytes, _ := json.MarshalIndent(data, "", "  ")
 		fmt.Println(string(jsonBytes))
@@ -45,7 +46,8 @@ func (s *OrderService) FetchAndUpdateTransactionDetails(ctx context.Context, ord
 		}
 
 		// Parse and update the existing transaction and order in DB
-		transactionModel := helpers.MapPineOrderToTransactionModel(data)
+		transactionModel := helpers.MapPineOrderToTransactionModel(data, receivedSignature)
+
 		fmt.Println("Updating transaction with transactionModel:", transactionModel)
 
 		// Save or update transaction in your DB

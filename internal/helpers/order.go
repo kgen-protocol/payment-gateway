@@ -61,7 +61,7 @@ func BuildOrderPayload(req dto.PlaceOrderRequest) ([]byte, error) {
 	return jsonBytes, nil
 }
 
-func MapPineOrderToTransactionModel(data *dto.PineOrderResponse) model.Transaction {
+func MapPineOrderToTransactionModel(data *dto.PineOrderResponse, signature string) model.Transaction {
 	payments := make([]model.Payment, 0)
 
 	for _, p := range data.Data.Payments {
@@ -115,13 +115,13 @@ func MapPineOrderToTransactionModel(data *dto.PineOrderResponse) model.Transacti
 		},
 		PineOrderID:     data.Data.OrderID,
 		Status:          data.Data.Status,
+		Signature:       signature,
 		IntegrationMode: data.Data.IntegrationMode,
 		Payments:        payments,
 		CreatedAt:       data.Data.CreatedAt,
 		UpdatedAt:       data.Data.UpdatedAt,
 	}
 }
-
 
 func MapRefundsToTransactionModel(data *dto.PineOrderResponse, transactionID primitive.ObjectID) model.Transaction {
 	// Map Payments
@@ -228,6 +228,7 @@ func MapRefundsToTransactionModel(data *dto.PineOrderResponse, transactionID pri
 		},
 		PineOrderID:     data.Data.OrderID,
 		Status:          data.Data.Status,
+		Signature:       data.Data.Signature,
 		IntegrationMode: data.Data.IntegrationMode,
 		Payments:        payments,
 		Refunds:         refunds, // ✅ Added refunds here

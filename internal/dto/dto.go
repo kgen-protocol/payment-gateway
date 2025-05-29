@@ -133,6 +133,7 @@ type PineOrderData struct {
 	MerchantOrderReference  string         `json:"merchant_order_reference"`
 	Type                    string         `json:"type"`
 	Status                  string         `json:"status"`
+	Signature               string         `json:"signature"`
 	CallbackURL             string         `json:"callback_url"`
 	FailureCallbackURL      string         `json:"failure_callback_url"`
 	MerchantID              string         `json:"merchant_id"`
