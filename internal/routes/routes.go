@@ -11,16 +11,16 @@ import (
 
 // routeRegistry holds the mapping of route initialization functions
 var routeRegistry = map[string]func(r chi.Router, db *mongo.Database){
-	"auth":     SetupAuthRoutes,
-	"orders":   SetupOrderRoutes,
-	"products": SetupProductRoutes,
-	"dbs":      SetupDBSRoutes,
+	"auth":             SetupAuthRoutes,
+	"orders":           SetupOrderRoutes,
+	"products":         SetupProductRoutes,
+	"payments-webhook": SetupDBSRoutes,
 }
 
 // SetupRoutes initializes all application routes with /api prefix
 func SetupRoutes(r *chi.Mux, db *mongo.Database) {
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		utils.SendSuccessResponse(w, http.StatusOK, "API is working correctly", nil)
 	})
 
@@ -33,5 +33,5 @@ func SetupRoutes(r *chi.Mux, db *mongo.Database) {
 		})
 	}
 
-	r.Mount("/api", apiRouter)
+	r.Mount("/api/v1", apiRouter)
 }
