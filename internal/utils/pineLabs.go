@@ -168,14 +168,14 @@ func CreateRefundRequest(ctx context.Context, accessToken, orderID string, paylo
 	return &refundResp, nil
 }
 
-func GenerateServerSignature(orderID, paymentStatus, errorCode, errorMessage, hexSecretKey string) (string, error) {
+func GenerateServerSignature(orderID, status, errorCode, errorMessage, hexSecretKey string) (string, error) {
 	// Create a map of parameters for the message string.
 	// The secret_key is NOT part of this message string for HMAC.
 	params := map[string]string{
-		"order_id":       orderID,
-		"payment_status": paymentStatus,
-		"error_code":     errorCode,
-		"error_message":  errorMessage,
+		"order_id":      orderID,
+		"status":        status,
+		"error_code":    errorCode,
+		"error_message": errorMessage,
 	}
 
 	// Collect keys and sort them alphabetically to ensure consistent order.
