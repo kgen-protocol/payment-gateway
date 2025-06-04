@@ -35,11 +35,7 @@ func (s *OrderService) FetchAndUpdateTransactionDetails(ctx context.Context, ord
 		}
 
 		data, err := utils.GetOrderDetails(bgCtx, tokenResp.AccessToken, orderID)
-		fmt.Println(" data:", data)
 
-		jsonBytes, _ := json.MarshalIndent(data, "", "  ")
-		fmt.Println(string(jsonBytes))
-		fmt.Println("Updating transaction with data:", data)
 		if err != nil {
 			fmt.Println("err:", err)
 			return
@@ -47,8 +43,6 @@ func (s *OrderService) FetchAndUpdateTransactionDetails(ctx context.Context, ord
 
 		// Parse and update the existing transaction and order in DB
 		transactionModel := helpers.MapPineOrderToTransactionModel(data, receivedSignature)
-
-		fmt.Println("Updating transaction with transactionModel:", transactionModel)
 
 		// Save or update transaction in your DB
 		err = s.transactionRepo.UpdateTransactionByOrderID(bgCtx, orderID, transactionModel)
