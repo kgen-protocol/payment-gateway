@@ -218,12 +218,12 @@ func CreateRefundRequest(ctx context.Context, accessToken, orderID string, paylo
 // }
 
 // GenerateServerSignature now conditionally includes error_code and error_message.
-func GenerateServerSignature(orderID, paymentStatus, errorCode, errorMessage, hexSecretKey string) (string, error) {
+func GenerateServerSignature(orderID, status, errorCode, errorMessage, hexSecretKey string) (string, error) {
 	params := make(map[string]string) // Use make to initialize an empty map
 
 	// Always include order_id and payment_status
 	params["order_id"] = orderID
-	params["payment_status"] = paymentStatus
+	params["status"] = status
 
 	// Conditionally include error_code and error_message only if they are not empty
 	if errorCode != "" {
